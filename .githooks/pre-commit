@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-commit hook: run Biome lint + format check before each commit.
+#
+# Install once after cloning:
+#   git config core.hooksPath .githooks
+
+set -e
+
+echo "Running Biome check..."
+npx biome check --no-errors-on-unmatched .
+
+echo "Pre-commit checks passed."

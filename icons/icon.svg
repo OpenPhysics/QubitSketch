@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Dark background -->
+  <rect width="512" height="512" fill="#0d1b2a" rx="72"/>
+
+  <!-- Qubit wire 1 (top) -->
+  <line x1="48" y1="160" x2="464" y2="160" stroke="#1e88e5" stroke-width="5" stroke-linecap="round"/>
+  <!-- Qubit wire 2 (middle) -->
+  <line x1="48" y1="256" x2="464" y2="256" stroke="#1e88e5" stroke-width="5" stroke-linecap="round"/>
+  <!-- Qubit wire 3 (bottom) -->
+  <line x1="48" y1="352" x2="464" y2="352" stroke="#1e88e5" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- H gate — wire 1, step 1 -->
+  <rect x="80" y="126" width="68" height="68" fill="#7c4dff" rx="8"/>
+  <text x="114" y="172" text-anchor="middle" font-family="monospace" font-size="38" font-weight="bold" fill="white">H</text>
+
+  <!-- X gate — wire 2, step 2 -->
+  <rect x="200" y="222" width="68" height="68" fill="#ef5350" rx="8"/>
+  <text x="234" y="268" text-anchor="middle" font-family="monospace" font-size="38" font-weight="bold" fill="white">X</text>
+
+  <!-- Z gate — wire 1, step 3 -->
+  <rect x="320" y="126" width="68" height="68" fill="#42a5f5" rx="8"/>
+  <text x="354" y="172" text-anchor="middle" font-family="monospace" font-size="38" font-weight="bold" fill="white">Z</text>
+
+  <!-- T gate — wire 3, step 3 -->
+  <rect x="320" y="318" width="68" height="68" fill="#ffca28" rx="8"/>
+  <text x="354" y="364" text-anchor="middle" font-family="monospace" font-size="38" font-weight="bold" fill="#1a1a1a">T</text>
+</svg>
