@@ -6,6 +6,7 @@
  */
 import type { ReadOnlyProperty } from "scenerystack/axon";
 import { LocalizedString } from "scenerystack/chipper";
+import type { SelectedTool } from "../circuit-screen/model/GateType.js";
 import stringsEn from "./strings_en.json";
 import stringsFr from "./strings_fr.json";
 
@@ -81,6 +82,38 @@ export class StringManager {
     return {
       measureStringProperty: stringProperties.buttons.measureStringProperty,
       clearShotsStringProperty: stringProperties.buttons.clearShotsStringProperty,
+    };
+  }
+
+  /** Labels for the rotation-gate angle inspector. */
+  public getInspectorStrings(): {
+    readonly angleStringProperty: ReadOnlyProperty<string>;
+  } {
+    return {
+      angleStringProperty: stringProperties.inspector.angleStringProperty,
+    };
+  }
+
+  /** One-line descriptions for each palette tool, keyed by {@link SelectedTool}. */
+  public getToolDescriptions(): Record<SelectedTool, ReadOnlyProperty<string>> {
+    const d = stringProperties.descriptions;
+    return {
+      H: d.HStringProperty,
+      X: d.XStringProperty,
+      Y: d.YStringProperty,
+      Z: d.ZStringProperty,
+      S: d.SStringProperty,
+      T: d.TStringProperty,
+      Sdg: d.SdgStringProperty,
+      Tdg: d.TdgStringProperty,
+      Vx: d.VxStringProperty,
+      Rx: d.RxStringProperty,
+      Ry: d.RyStringProperty,
+      Rz: d.RzStringProperty,
+      control: d.controlStringProperty,
+      antiControl: d.antiControlStringProperty,
+      swap: d.swapStringProperty,
+      eraser: d.eraserStringProperty,
     };
   }
 }

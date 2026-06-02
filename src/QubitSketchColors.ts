@@ -85,6 +85,37 @@ const QubitSketchColors = {
     projector: "#f57f17",
   }),
 
+  sdgGateColorProperty: new ProfileColorProperty(QubitSketchNamespace, "sdgGate", {
+    default: "#00acc1",
+    projector: "#006064",
+  }),
+
+  tdgGateColorProperty: new ProfileColorProperty(QubitSketchNamespace, "tdgGate", {
+    default: "#ffb300",
+    projector: "#e65100",
+  }),
+
+  vxGateColorProperty: new ProfileColorProperty(QubitSketchNamespace, "vxGate", {
+    default: "#ec407a",
+    projector: "#ad1457",
+  }),
+
+  // Parametrized rotation gates (Rx, Ry, Rz) — lighter relatives of the Pauli colors
+  rxGateColorProperty: new ProfileColorProperty(QubitSketchNamespace, "rxGate", {
+    default: "#e57373",
+    projector: "#b71c1c",
+  }),
+
+  ryGateColorProperty: new ProfileColorProperty(QubitSketchNamespace, "ryGate", {
+    default: "#ffb74d",
+    projector: "#e65100",
+  }),
+
+  rzGateColorProperty: new ProfileColorProperty(QubitSketchNamespace, "rzGate", {
+    default: "#64b5f6",
+    projector: "#0d47a1",
+  }),
+
   eraserColorProperty: new ProfileColorProperty(QubitSketchNamespace, "eraser", {
     default: "#546e7a",
     projector: "#455a64",
@@ -94,6 +125,12 @@ const QubitSketchColors = {
   controlDotColorProperty: new ProfileColorProperty(QubitSketchNamespace, "controlDot", {
     default: "#e8eaf6",
     projector: "#1a1a1a",
+  }),
+
+  // SWAP endpoint (✕) markers and the line connecting them
+  swapMarkerColorProperty: new ProfileColorProperty(QubitSketchNamespace, "swapMarker", {
+    default: "#26a69a",
+    projector: "#00695c",
   }),
 
   // Simulation displays

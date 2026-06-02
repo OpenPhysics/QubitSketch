@@ -20,9 +20,9 @@ import type { Vector2 } from "scenerystack/dot";
 import { Circle, Line, Node, Rectangle, Text } from "scenerystack/scenery";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import type { CircuitCell } from "../model/GateType.js";
-import { cellGate, MAX_QUBITS, NUM_STEPS } from "../model/GateType.js";
+import { cellGate, isAnyControl, MAX_QUBITS, NUM_STEPS } from "../model/GateType.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
-import { GateNode } from "./GateNode.js";
+import { GateNode, RotationGateNode } from "./GateNode.js";
 
 const LABEL_WIDTH = 52;
 const SLOT_SIZE = 50;
@@ -54,6 +54,8 @@ export class CircuitCanvas extends Node {
   /** Layer holding control→target connector lines, one per column. */
   private readonly connectorLayer: Node;
   private readonly connectors: Array<Line | null>;
+  /** Highlight ring around the rotation cell whose angle is being edited. */
+  private readonly selectionRing: Rectangle;
 
   public constructor(model: QubitSketchModel) {
     super();
@@ -64,6 +66,14 @@ export class CircuitCanvas extends Node {
     this.connectors = Array.from({ length: NUM_STEPS }, () => null);
 
     this.connectorLayer = new Node({ pickable: false });
+    this.selectionRing = new Rectangle(0, 0, SLOT_SIZE + 6, SLOT_SIZE + 6, {
+      fill: null,
+      stroke: QubitSketchColors.selectedToolHighlightColorProperty,
+      lineWidth: 2,
+      cornerRadius: 6,
+      visible: false,
+      pickable: false,
+    });
 
     // Build one row per qubit (up to MAX_QUBITS; hidden rows are toggled by qubitCountProperty)
     for (let q = 0; q < MAX_QUBITS; q++) {
@@ -119,7 +129,13 @@ export class CircuitCanvas extends Node {
             slot.fill = QubitSketchColors.slotBackgroundColorProperty;
           },
           down: () => {
-            model.placeCell(q, stepIndex);
+            // Clicking an existing rotation gate (with any non-eraser tool) opens its angle inspector.
+            const cell = model.circuitProperty.value[q]?.[stepIndex];
+            if (cell?.kind === "paramGate" && model.selectedToolProperty.value !== "eraser") {
+              model.selectedCellProperty.value = { qubit: q, step: stepIndex };
+            } else {
+              model.placeCell(q, stepIndex);
+            }
           },
         });
       }
@@ -130,11 +146,24 @@ export class CircuitCanvas extends Node {
 
     // Connector lines draw on top of the wires but below the gate/control nodes' rows.
     this.addChild(this.connectorLayer);
+    // Selection ring floats above the cells.
+    this.addChild(this.selectionRing);
 
     // React to circuit changes — update gate/control nodes and connectors
     model.circuitProperty.link((circuit) => {
       this.updateCellNodes(circuit);
       this.updateConnectors(circuit, model.qubitCountProperty.value);
+    });
+
+    // Highlight the rotation cell whose angle is being edited.
+    model.selectedCellProperty.link((sel) => {
+      if (sel === null) {
+        this.selectionRing.visible = false;
+      } else {
+        this.selectionRing.visible = true;
+        this.selectionRing.x = slotX(sel.step) - 3;
+        this.selectionRing.y = rowY(sel.qubit) - 3;
+      }
     });
 
     // React to qubit count changes — show/hide rows and refresh connectors
@@ -159,6 +188,35 @@ export class CircuitCanvas extends Node {
         pickable: false,
       });
     }
+    if (cell.kind === "antiControl") {
+      // Open circle (◦): conditions on |0⟩.
+      return new Circle(CONTROL_DOT_RADIUS, {
+        fill: QubitSketchColors.slotBackgroundColorProperty,
+        stroke: QubitSketchColors.controlDotColorProperty,
+        lineWidth: 2,
+        centerX: slotCenterX(step),
+        centerY: slotCenterY(qubit),
+        pickable: false,
+      });
+    }
+    if (cell.kind === "swap") {
+      // ✕ marker for a SWAP endpoint.
+      const cx = slotCenterX(step);
+      const cy = slotCenterY(qubit);
+      const r = CONTROL_DOT_RADIUS + 1;
+      const node = new Node({ pickable: false });
+      const stroke = QubitSketchColors.swapMarkerColorProperty;
+      node.addChild(new Line(cx - r, cy - r, cx + r, cy + r, { stroke, lineWidth: 3 }));
+      node.addChild(new Line(cx - r, cy + r, cx + r, cy - r, { stroke, lineWidth: 3 }));
+      return node;
+    }
+    if (cell.kind === "paramGate") {
+      const gateNode = new RotationGateNode(cell.axis, SLOT_SIZE - 4, cell.theta);
+      gateNode.x = slotX(step) + 2;
+      gateNode.y = rowY(qubit) + 2;
+      gateNode.pickable = false;
+      return gateNode;
+    }
     const gate = cellGate(cell);
     if (gate !== null) {
       const gateNode = new GateNode(gate, SLOT_SIZE - 4);
@@ -173,6 +231,9 @@ export class CircuitCanvas extends Node {
   private cellsEqual(a: CircuitCell, b: CircuitCell): boolean {
     if (a.kind !== b.kind) {
       return false;
+    }
+    if (a.kind === "paramGate" && b.kind === "paramGate") {
+      return a.axis === b.axis && a.theta === b.theta;
     }
     return cellGate(a) === cellGate(b);
   }
@@ -208,8 +269,8 @@ export class CircuitCanvas extends Node {
 
   /**
    * Draws a vertical connector line per column from the topmost to the bottommost
-   * occupied wire whenever that column contains a control dot (so the user sees
-   * which target the control acts on).
+   * occupied wire whenever that column contains a control (• or ◦) or a pair of SWAP
+   * endpoints, so the user sees which wires the operation links.
    */
   private updateConnectors(circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>, qubitCount: number): void {
     for (let s = 0; s < NUM_STEPS; s++) {
@@ -220,6 +281,7 @@ export class CircuitCanvas extends Node {
       }
 
       let hasControl = false;
+      let swapCount = 0;
       let top = -1;
       let bottom = -1;
       for (let q = 0; q < qubitCount; q++) {
@@ -227,8 +289,11 @@ export class CircuitCanvas extends Node {
         if (cell.kind === "empty") {
           continue;
         }
-        if (cell.kind === "control") {
+        if (isAnyControl(cell)) {
           hasControl = true;
+        }
+        if (cell.kind === "swap") {
+          swapCount++;
         }
         if (top === -1) {
           top = q;
@@ -236,9 +301,10 @@ export class CircuitCanvas extends Node {
         bottom = q;
       }
 
-      if (hasControl && top !== -1 && bottom > top) {
+      const shouldConnect = (hasControl || swapCount === 2) && top !== -1 && bottom > top;
+      if (shouldConnect) {
         const line = new Line(slotCenterX(s), slotCenterY(top), slotCenterX(s), slotCenterY(bottom), {
-          stroke: QubitSketchColors.controlDotColorProperty,
+          stroke: hasControl ? QubitSketchColors.controlDotColorProperty : QubitSketchColors.swapMarkerColorProperty,
           lineWidth: 2,
           pickable: false,
         });

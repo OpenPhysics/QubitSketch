@@ -11,36 +11,56 @@
  */
 import { Complex, Vector3 } from "scenerystack/dot";
 import type { Complex2x2 } from "./GateMatrices.js";
-import { GATE_MATRICES } from "./GateMatrices.js";
+import { GATE_MATRICES, rotationMatrix } from "./GateMatrices.js";
 import type { CircuitCell } from "./GateType.js";
-import { cellGate, isControl, NUM_STEPS } from "./GateType.js";
+import { cellGate, NUM_STEPS } from "./GateType.js";
+
+/**
+ * The 2×2 unitary a cell applies, or null if the cell bears no gate
+ * (empty / control / anti-control / swap markers).
+ */
+export function cellMatrix(cell: CircuitCell): Complex2x2 | null {
+  if (cell.kind === "paramGate") {
+    return rotationMatrix(cell.axis, cell.theta);
+  }
+  const gate = cellGate(cell);
+  return gate === null ? null : GATE_MATRICES[gate];
+}
 
 /**
  * Applies a 2×2 gate matrix to one target wire, optionally conditioned on a set
- * of control wires (all controls must be |1⟩ for the gate to act).
+ * of control wires. `onControls` must be |1⟩ and `offControls` (anti-controls)
+ * must be |0⟩ for the gate to act.
  *
  * This is the heart of the simulator. The state is a superposition over basis
  * states; flipping `target` connects basis states that differ only in bit
  * `target`. We walk each such pair once and rotate it by the matrix `m`, but
- * only for pairs where every control bit is already 1.
+ * only for pairs whose control bits already match the required pattern.
  *
  * Mutates `state` in place.
  */
 export function applyControlledGate(
   state: Complex[],
   target: number,
-  controls: readonly number[],
+  onControls: readonly number[],
+  offControls: readonly number[],
   m: Complex2x2,
 ): void {
   const targetBit = 1 << target;
   let controlMask = 0;
-  for (const c of controls) {
+  let controlValue = 0; // the bit pattern the controls must match: 1 for on-controls, 0 for anti-controls
+  for (const c of onControls) {
+    const bit = 1 << c;
+    controlMask |= bit;
+    controlValue |= bit;
+  }
+  for (const c of offControls) {
     controlMask |= 1 << c;
   }
 
   for (let i = 0; i < state.length; i++) {
-    // Visit only the "0 at target" member of each pair, and only when all controls are 1.
-    if ((i & targetBit) !== 0 || (i & controlMask) !== controlMask) {
+    // Visit only the "0 at target" member of each pair, and only when the controls match.
+    if ((i & targetBit) !== 0 || (i & controlMask) !== controlValue) {
       continue;
     }
     const j = i | targetBit; // partner with "1 at target"
@@ -52,17 +72,40 @@ export function applyControlledGate(
 }
 
 /**
+ * Exchanges two wires (a SWAP gate) by swapping the amplitudes of every basis-state
+ * pair that differs on exactly bits `a` and `b`. Mutates `state` in place.
+ */
+export function applySwap(state: Complex[], a: number, b: number): void {
+  if (a === b) {
+    return;
+  }
+  const aBit = 1 << a;
+  const bBit = 1 << b;
+  for (let i = 0; i < state.length; i++) {
+    // Visit each differing pair once: bit a = 0, bit b = 1.
+    if ((i & aBit) === 0 && (i & bBit) !== 0) {
+      const j = (i | aBit) & ~bBit; // partner with bit a = 1, bit b = 0
+      const tmp = state[i]!;
+      state[i] = state[j]!;
+      state[j] = tmp;
+    }
+  }
+}
+
+/**
  * Applies one circuit column (all cells at a given step) to the state.
  *
  * Semantics:
- *   - If the column contains one or more control dots, there must be exactly one
- *     gate-bearing wire; that gate is applied controlled by every control wire.
+ *   - A column with exactly two SWAP endpoints (and no controls) exchanges those wires.
+ *   - If the column contains one or more controls (• on |1⟩ or ◦ on |0⟩), there must be
+ *     exactly one gate-bearing wire; that gate is applied conditioned on every control.
  *     (CNOT = X target + one control. CCX/Toffoli = X target + two controls.)
- *   - Otherwise every gate cell is an independent single-qubit gate (disjoint
- *     targets commute, so order does not matter).
+ *   - Otherwise every gate cell is an independent single-qubit gate (disjoint targets
+ *     commute, so order does not matter).
  *
- * Limitation: with controls present, only the first gate-bearing wire is used as
- * the target — one controlled operation per column.
+ * Limitations (v1): with controls present, only the first gate-bearing wire is the target
+ * (one controlled operation per column); controlled-SWAP (Fredkin) and 3+ swap endpoints
+ * in a column are treated as no-ops.
  */
 function applyColumn(
   state: Complex[],
@@ -70,7 +113,9 @@ function applyColumn(
   circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>,
   step: number,
 ): void {
-  const controls: number[] = [];
+  const onControls: number[] = [];
+  const offControls: number[] = [];
+  const swapWires: number[] = [];
   const gateWires: Array<{ wire: number; matrix: Complex2x2 }> = [];
 
   for (let q = 0; q < n; q++) {
@@ -78,26 +123,42 @@ function applyColumn(
     if (cell === undefined) {
       continue;
     }
-    if (isControl(cell)) {
-      controls.push(q);
+    if (cell.kind === "control") {
+      onControls.push(q);
       continue;
     }
-    const gate = cellGate(cell);
-    if (gate !== null) {
-      gateWires.push({ wire: q, matrix: GATE_MATRICES[gate] });
+    if (cell.kind === "antiControl") {
+      offControls.push(q);
+      continue;
+    }
+    if (cell.kind === "swap") {
+      swapWires.push(q);
+      continue;
+    }
+    const m = cellMatrix(cell);
+    if (m !== null) {
+      gateWires.push({ wire: q, matrix: m });
     }
   }
 
-  if (controls.length > 0) {
+  const hasControl = onControls.length > 0 || offControls.length > 0;
+
+  // SWAP: exactly two endpoints and no controls (controlled-SWAP is not supported in v1).
+  if (swapWires.length === 2 && !hasControl) {
+    applySwap(state, swapWires[0]!, swapWires[1]!);
+    return;
+  }
+
+  if (hasControl) {
     // Controlled operation: apply the first gate target conditioned on all controls.
     const targetGate = gateWires[0];
     if (targetGate !== undefined) {
-      applyControlledGate(state, targetGate.wire, controls, targetGate.matrix);
+      applyControlledGate(state, targetGate.wire, onControls, offControls, targetGate.matrix);
     }
     // Stray controls with no target are a no-op (documented).
   } else {
     for (const { wire, matrix } of gateWires) {
-      applyControlledGate(state, wire, [], matrix);
+      applyControlledGate(state, wire, [], [], matrix);
     }
   }
 }

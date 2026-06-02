@@ -13,10 +13,11 @@ import { Node, Rectangle, Text } from "scenerystack/scenery";
 import { ResetAllButton } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
 import { ScreenView } from "scenerystack/sim";
+import { RectangularPushButton } from "scenerystack/sun";
 import QubitSketchColors from "../../QubitSketchColors.js";
-import { MAX_QUBITS, MIN_QUBITS } from "../model/GateType.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import { CIRCUIT_CANVAS_HEIGHT, CIRCUIT_CANVAS_WIDTH, CircuitCanvas } from "./CircuitCanvas.js";
+import { GateInspectorNode } from "./GateInspectorNode.js";
 import { GatePalettePanel } from "./GatePalettePanel.js";
 import { SimulationPanel } from "./SimulationPanel.js";
 
@@ -38,9 +39,15 @@ export class CircuitScreenView extends ScreenView {
 
     // Layer that floating drag previews are added to (kept on top of everything).
     const dragLayer = new Node({ pickable: false });
+    // Layer for hover tooltips (kept above everything else).
+    const tooltipLayer = new Node({ pickable: false });
 
     // ── Gate palette (left side) ──────────────────────────────────────────────
-    const palette = new GatePalettePanel(model, { dragLayer, dropTarget: circuitCanvas });
+    const palette = new GatePalettePanel(model, {
+      dragLayer,
+      dropTarget: circuitCanvas,
+      overlayLayer: tooltipLayer,
+    });
     palette.left = MARGIN;
     palette.centerY = this.layoutBounds.centerY;
     this.addChild(palette);
@@ -67,6 +74,48 @@ export class CircuitScreenView extends ScreenView {
     this.addChild(qubitControlNode);
     this.addChild(circuitCanvas);
 
+    // ── Undo / redo (next to the qubit-count control) ─────────────────────────
+    const undoButton = new RectangularPushButton({
+      content: new Text("↶", { font: "bold 18px sans-serif", fill: QubitSketchColors.textColorProperty }),
+      listener: () => model.undo(),
+      enabledProperty: model.canUndoProperty,
+      baseColor: QubitSketchColors.panelBackgroundColorProperty,
+    });
+    const redoButton = new RectangularPushButton({
+      content: new Text("↷", { font: "bold 18px sans-serif", fill: QubitSketchColors.textColorProperty }),
+      listener: () => model.redo(),
+      enabledProperty: model.canRedoProperty,
+      baseColor: QubitSketchColors.panelBackgroundColorProperty,
+    });
+    undoButton.left = qubitControlNode.right + 24;
+    undoButton.centerY = qubitControlNode.centerY;
+    redoButton.left = undoButton.right + 6;
+    redoButton.centerY = qubitControlNode.centerY;
+    this.addChild(undoButton);
+    this.addChild(redoButton);
+
+    // Keyboard: Ctrl/Cmd+Z = undo, Ctrl+Y or Ctrl/Cmd+Shift+Z = redo.
+    window.addEventListener("keydown", (e) => {
+      const meta = e.ctrlKey || e.metaKey;
+      if (!meta || e.altKey) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) {
+        model.undo();
+        e.preventDefault();
+      } else if (key === "y" || (key === "z" && e.shiftKey)) {
+        model.redo();
+        e.preventDefault();
+      }
+    });
+
+    // ── Rotation-gate angle inspector (below the circuit) ─────────────────────
+    const inspector = new GateInspectorNode(model);
+    inspector.left = circuitCanvas.x;
+    inspector.top = circuitCanvas.y + CIRCUIT_CANVAS_HEIGHT + 16;
+    this.addChild(inspector);
+
     // ── Reset All button ──────────────────────────────────────────────────────
     const resetAllButton = new ResetAllButton({
       listener: () => {
@@ -78,8 +127,9 @@ export class CircuitScreenView extends ScreenView {
     });
     this.addChild(resetAllButton);
 
-    // Drag previews float above all other content.
+    // Drag previews and tooltips float above all other content.
     this.addChild(dragLayer);
+    this.addChild(tooltipLayer);
   }
 
   /**
@@ -111,11 +161,7 @@ export class CircuitScreenView extends ScreenView {
     });
     minusBox.addChild(minusLabel);
     minusBox.addInputListener({
-      down: () => {
-        if (model.qubitCountProperty.value > MIN_QUBITS) {
-          model.qubitCountProperty.value--;
-        }
-      },
+      down: () => model.setQubitCount(model.qubitCountProperty.value - 1),
     });
     container.addChild(minusBox);
 
@@ -157,11 +203,7 @@ export class CircuitScreenView extends ScreenView {
     });
     plusBox.addChild(plusLabel);
     plusBox.addInputListener({
-      down: () => {
-        if (model.qubitCountProperty.value < MAX_QUBITS) {
-          model.qubitCountProperty.value++;
-        }
-      },
+      down: () => model.setQubitCount(model.qubitCountProperty.value + 1),
     });
     container.addChild(plusBox);
 

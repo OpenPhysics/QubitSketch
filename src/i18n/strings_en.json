@@ -21,5 +21,26 @@
   },
   "tools": {
     "control": "Control"
+  },
+  "inspector": {
+    "angle": "Angle"
+  },
+  "descriptions": {
+    "H": "Hadamard — creates an equal superposition",
+    "X": "Pauli-X — bit flip (quantum NOT)",
+    "Y": "Pauli-Y — combined bit and phase flip",
+    "Z": "Pauli-Z — phase flip of |1⟩",
+    "S": "Phase (S) — adds a +90° phase to |1⟩",
+    "T": "T — adds a +45° phase to |1⟩",
+    "Sdg": "S† — adds a −90° phase to |1⟩",
+    "Tdg": "T† — adds a −45° phase to |1⟩",
+    "Vx": "√X — square root of NOT",
+    "Rx": "Rx(θ) — rotation about the X axis",
+    "Ry": "Ry(θ) — rotation about the Y axis",
+    "Rz": "Rz(θ) — rotation about the Z axis",
+    "control": "Control — conditions the column's gate on |1⟩",
+    "antiControl": "Anti-control — conditions the column's gate on |0⟩",
+    "swap": "Swap — exchanges two qubits (place two)",
+    "eraser": "Eraser — clears a cell"
   }
 }

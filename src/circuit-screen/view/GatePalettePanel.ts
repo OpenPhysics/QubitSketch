@@ -7,24 +7,43 @@
  *
  * The active tool is shown with a highlight border.
  */
-import { Circle, DragListener, Node, Rectangle, Text } from "scenerystack/scenery";
+import type { Vector2 } from "scenerystack/dot";
+import { Circle, DragListener, Line, Node, Rectangle, Text } from "scenerystack/scenery";
+import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import type { Complex2x2 } from "../model/GateMatrices.js";
+import { GATE_MATRICES, rotationMatrix } from "../model/GateMatrices.js";
 import type { SelectedTool } from "../model/GateType.js";
-import { GateType } from "../model/GateType.js";
+import { GateType, ROTATION_TOOL_AXIS } from "../model/GateType.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import type { SlotDropTarget } from "./CircuitCanvas.js";
-import { GateNode } from "./GateNode.js";
+import { GateNode, RotationGateNode } from "./GateNode.js";
+import { MatrixTooltipNode } from "./MatrixTooltipNode.js";
 
 /** Where dragged gates float and land. Supplied by CircuitScreenView. */
 export interface PaletteDragContext {
   readonly dragLayer: Node;
   readonly dropTarget: SlotDropTarget;
+  /** Overlay layer (above everything) where hover tooltips are shown. */
+  readonly overlayLayer: Node;
+}
+
+/** The 2×2 matrix a palette tool applies, or null for markers (control/swap/eraser). */
+function toolMatrix(tool: SelectedTool): Complex2x2 | null {
+  if (tool === "Rx" || tool === "Ry" || tool === "Rz") {
+    return rotationMatrix(ROTATION_TOOL_AXIS[tool], Math.PI / 2);
+  }
+  if (tool === "control" || tool === "antiControl" || tool === "swap" || tool === "eraser") {
+    return null;
+  }
+  return GATE_MATRICES[tool];
 }
 
 const BUTTON_SIZE = 52;
 const BUTTON_GAP = 8;
 const PANEL_PADDING = 10;
 const HIGHLIGHT_INSET = 3;
+const COLUMNS = 2;
 
 const ALL_TOOLS: SelectedTool[] = [
   GateType.H,
@@ -33,7 +52,15 @@ const ALL_TOOLS: SelectedTool[] = [
   GateType.Z,
   GateType.S,
   GateType.T,
+  GateType.Sdg,
+  GateType.Tdg,
+  GateType.Vx,
+  "Rx",
+  "Ry",
+  "Rz",
   "control",
+  "antiControl",
+  "swap",
   "eraser",
 ];
 
@@ -43,8 +70,9 @@ export class GatePalettePanel extends Node {
   public constructor(model: QubitSketchModel, dragContext?: PaletteDragContext) {
     super();
 
-    const panelHeight = ALL_TOOLS.length * (BUTTON_SIZE + BUTTON_GAP) - BUTTON_GAP + PANEL_PADDING * 2;
-    const panelWidth = BUTTON_SIZE + PANEL_PADDING * 2;
+    const rowCount = Math.ceil(ALL_TOOLS.length / COLUMNS);
+    const panelHeight = rowCount * (BUTTON_SIZE + BUTTON_GAP) - BUTTON_GAP + PANEL_PADDING * 2;
+    const panelWidth = COLUMNS * BUTTON_SIZE + (COLUMNS - 1) * BUTTON_GAP + PANEL_PADDING * 2;
 
     const background = new Rectangle(0, 0, panelWidth, panelHeight, {
       fill: QubitSketchColors.panelBackgroundColorProperty,
@@ -56,10 +84,35 @@ export class GatePalettePanel extends Node {
 
     const buttonEntries: ButtonEntry[] = [];
 
+    // Hover tooltips (shown in the overlay layer, so they float above the circuit).
+    const descriptions = StringManager.getInstance().getToolDescriptions();
+    const overlayLayer = dragContext?.overlayLayer;
+    let activeTooltip: Node | null = null;
+    const hideTooltip = (): void => {
+      if (activeTooltip !== null && overlayLayer !== undefined) {
+        overlayLayer.removeChild(activeTooltip);
+        activeTooltip = null;
+      }
+    };
+    const showTooltip = (tool: SelectedTool, globalPoint: Vector2): void => {
+      if (overlayLayer === undefined) {
+        return;
+      }
+      hideTooltip();
+      const tooltip = new MatrixTooltipNode(toolMatrix(tool), descriptions[tool]);
+      const local = overlayLayer.globalToLocalPoint(globalPoint);
+      tooltip.left = local.x + 16;
+      tooltip.top = Math.max(4, local.y + 10);
+      overlayLayer.addChild(tooltip);
+      activeTooltip = tooltip;
+    };
+
     for (let i = 0; i < ALL_TOOLS.length; i++) {
       const tool = ALL_TOOLS[i]!;
-      const btnX = PANEL_PADDING;
-      const btnY = PANEL_PADDING + i * (BUTTON_SIZE + BUTTON_GAP);
+      const col = i % COLUMNS;
+      const row = Math.floor(i / COLUMNS);
+      const btnX = PANEL_PADDING + col * (BUTTON_SIZE + BUTTON_GAP);
+      const btnY = PANEL_PADDING + row * (BUTTON_SIZE + BUTTON_GAP);
 
       // Selection highlight — a border drawn around the button when it is active
       const highlight = new Rectangle(
@@ -90,6 +143,13 @@ export class GatePalettePanel extends Node {
         cursor: "pointer",
       });
 
+      if (overlayLayer !== undefined) {
+        hitArea.addInputListener({
+          enter: (event) => showTooltip(tool, event.pointer.point),
+          exit: () => hideTooltip(),
+        });
+      }
+
       if (dragContext === undefined) {
         // Click-to-select only.
         hitArea.addInputListener({
@@ -104,6 +164,7 @@ export class GatePalettePanel extends Node {
         hitArea.addInputListener(
           new DragListener({
             start: (event) => {
+              hideTooltip();
               model.selectedToolProperty.value = tool;
               preview = makeToolNode(tool, BUTTON_SIZE);
               preview.opacity = 0.85;
@@ -168,6 +229,41 @@ function makeToolNode(tool: SelectedTool, size: number): Node {
     node.addChild(
       new Circle(8, { fill: QubitSketchColors.controlDotColorProperty, centerX: size / 2, centerY: size / 2 }),
     );
+  } else if (tool === "antiControl") {
+    node.addChild(
+      new Rectangle(0, 0, size, size, {
+        fill: QubitSketchColors.slotBackgroundColorProperty,
+        stroke: QubitSketchColors.slotBorderColorProperty,
+        lineWidth: 1,
+        cornerRadius: 6,
+      }),
+    );
+    node.addChild(
+      new Circle(8, {
+        fill: QubitSketchColors.slotBackgroundColorProperty,
+        stroke: QubitSketchColors.controlDotColorProperty,
+        lineWidth: 2,
+        centerX: size / 2,
+        centerY: size / 2,
+      }),
+    );
+  } else if (tool === "swap") {
+    node.addChild(
+      new Rectangle(0, 0, size, size, {
+        fill: QubitSketchColors.slotBackgroundColorProperty,
+        stroke: QubitSketchColors.slotBorderColorProperty,
+        lineWidth: 1,
+        cornerRadius: 6,
+      }),
+    );
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = size * 0.22;
+    const stroke = QubitSketchColors.swapMarkerColorProperty;
+    node.addChild(new Line(cx - r, cy - r, cx + r, cy + r, { stroke, lineWidth: 4 }));
+    node.addChild(new Line(cx - r, cy + r, cx + r, cy - r, { stroke, lineWidth: 4 }));
+  } else if (tool === "Rx" || tool === "Ry" || tool === "Rz") {
+    node.addChild(new RotationGateNode(ROTATION_TOOL_AXIS[tool], size));
   } else {
     node.addChild(new GateNode(tool, size));
   }

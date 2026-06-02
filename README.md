@@ -8,10 +8,16 @@ idiomatically in SceneryStack for teaching.
 
 ## What it does
 
-- **Build circuits** by dragging gates (H, X, Y, Z, S, T) from the palette onto the grid,
-  or by selecting a tool and clicking a slot.
-- **Controls & CNOT**: drop a control dot (•) in a column to make the gate in that column
-  controlled. Two control dots make a Toffoli (CCX). This is how you create **entanglement**.
+- **Build circuits** by dragging gates from the palette onto the grid, or by selecting a tool
+  and clicking a slot. Gates: **H, X, Y, Z, S, T, S†, T†, √X**, plus parametrized rotations
+  **Rx/Ry/Rz** (place one and drag the angle slider beneath the circuit).
+- **Controls, CNOT & SWAP**: drop a control dot (•) — or an anti-control (◦, conditions on |0⟩) —
+  in a column to make that column's gate controlled. Two control dots make a Toffoli (CCX).
+  Two SWAP endpoints (✕) in a column exchange those qubits. This is how you create **entanglement**.
+- **Hover any palette gate** to see its 2×2 unitary matrix and a one-line description.
+- **Undo / redo** every edit (toolbar buttons or Ctrl+Z / Ctrl+Y).
+- **Shareable links**: the circuit is encoded in the URL (`#circuit=…`), so copying the address
+  bar shares the exact circuit.
 - **Live simulation** (CPU statevector, ≤ 5 qubits) recomputes on every edit and drives four
   displays:
   - **Probabilities** — measurement probability `|amplitude|²` per basis state.
@@ -39,15 +45,17 @@ interference, entanglement, measurement). It deliberately omits Quirk's advanced
 
 - **CPU statevector only**, capped at **5 qubits** (32 amplitudes). No WebGL/GPU engine.
 - **No arithmetic / modular / increment / QFT / Grover / phase-estimation gates.**
-- **No parametrized or time-animated gates** (no rotation sliders, no `X^t`).
+- **Parametrized rotations are static** (an angle you set with a slider). There is **no time
+  animation** (no continuously spinning `X^t`).
 - **No density-matrix display.** A qubit's mixedness is conveyed only by its shortened Bloch
   arrow.
 - **No true 3D Bloch sphere** — a 2D oblique projection is used (Quirk renders a rotatable
   3D sphere).
-- **No custom/composite-gate editor** ("forge"), no gate grouping, no circuit import/export.
+- **No custom/composite-gate editor** ("forge") and no gate grouping. (Circuits *are* shareable
+  via the URL hash, but there is no JSON import/export UI.)
 - **Controls act only within their own column**, and there is **one target gate per column**
   when controls are present. Multiple control dots in a column *do* work (Toffoli/CCX).
-- **No anti-controls** (control-on-`|0⟩`) and **no SWAP/iSWAP**.
+  **Controlled-SWAP (Fredkin) is not supported** — SWAP and controls don't combine in one column.
 - **Measurement does not collapse the circuit.** The *Measure* button samples the final
   statevector for the histogram only; there is no mid-circuit measurement affecting later
   columns.
@@ -57,14 +65,21 @@ interference, entanglement, measurement). It deliberately omits Quirk's advanced
 ```
 src/circuit-screen/
   model/
-    GateType.ts          discriminated-union CircuitCell, gate/tool types, endianness note
-    GateMatrices.ts      2×2 complex matrices for H,X,Y,Z,S,T (scenerystack/dot Complex)
-    QuantumSimulator.ts  statevector engine: applyControlledGate, applyColumn, simulate,
-                         computeBlochVectors
-    QubitSketchModel.ts  circuit state + DerivedProperty chain (state → probs/bloch)
+    GateType.ts          discriminated-union CircuitCell (gate/control/antiControl/swap/
+                         controlledTarget/paramGate), gate/tool types, endianness note
+    GateMatrices.ts      2×2 complex matrices for the gates + rotationMatrix(axis, θ)
+    QuantumSimulator.ts  statevector engine: applyControlledGate (on/off controls), applySwap,
+                         cellMatrix, applyColumn, simulate, computeBlochVectors
+    QubitSketchModel.ts  circuit state + DerivedProperty chain (state → probs/bloch),
+                         undo/redo history, selected-cell (rotation) state
+    CircuitSerializer.ts circuit ↔ compact string for shareable URLs
+    CircuitUrlSync.ts    two-way sync between the circuit and the URL hash
   view/
-    CircuitCanvas.ts     grid, control dots + connectors, click-to-place, slotIndexAt
-    GatePalettePanel.ts  palette + drag-to-place (DragListener)
+    CircuitCanvas.ts     grid, control/swap connectors, click-to-place, slotIndexAt, selection ring
+    GatePalettePanel.ts  2-column palette + drag-to-place (DragListener) + hover matrix tooltips
+    GateNode.ts          gate visual + RotationGateNode (Rx/Ry/Rz)
+    GateInspectorNode.ts angle slider for the selected rotation gate
+    MatrixTooltipNode.ts hover tooltip showing a gate's 2×2 matrix
     SimulationPanel.ts   hosts the four display nodes (sun.Panel)
     ProbabilityBarsNode.ts  AmplitudeTableNode.ts  BlochSpheresNode.ts
     MeasurementHistogramNode.ts  displayUtils.ts

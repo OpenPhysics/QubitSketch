@@ -21,5 +21,26 @@
   },
   "tools": {
     "control": "Contrôle"
+  },
+  "inspector": {
+    "angle": "Angle"
+  },
+  "descriptions": {
+    "H": "Hadamard — crée une superposition égale",
+    "X": "Pauli-X — inversion de bit (NON quantique)",
+    "Y": "Pauli-Y — inversion de bit et de phase",
+    "Z": "Pauli-Z — inversion de phase de |1⟩",
+    "S": "Phase (S) — ajoute une phase de +90° à |1⟩",
+    "T": "T — ajoute une phase de +45° à |1⟩",
+    "Sdg": "S† — ajoute une phase de −90° à |1⟩",
+    "Tdg": "T† — ajoute une phase de −45° à |1⟩",
+    "Vx": "√X — racine carrée de NON",
+    "Rx": "Rx(θ) — rotation autour de l’axe X",
+    "Ry": "Ry(θ) — rotation autour de l’axe Y",
+    "Rz": "Rz(θ) — rotation autour de l’axe Z",
+    "control": "Contrôle — conditionne la porte de la colonne sur |1⟩",
+    "antiControl": "Anti-contrôle — conditionne la porte de la colonne sur |0⟩",
+    "swap": "Échange — permute deux qubits (placez-en deux)",
+    "eraser": "Gomme — efface une cellule"
   }
 }

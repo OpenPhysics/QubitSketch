@@ -35,14 +35,16 @@ brand.ts → splash.ts → assert.ts → init.ts
 | `src/QubitSketchNamespace.ts` | Namespace "qubit-sketch" for scoping color names |
 | `src/i18n/StringManager.ts` | Typed localized string access (singleton) |
 | `src/circuit-screen/CircuitScreen.ts` | Screen wrapper |
-| `src/circuit-screen/model/GateType.ts` | `GateType` const-enum + **discriminated-union `CircuitCell`** (empty/gate/control/controlledTarget), `SelectedTool`, endianness note |
-| `src/circuit-screen/model/GateMatrices.ts` | 2×2 complex unitaries per gate (`scenerystack/dot` `Complex`) |
-| `src/circuit-screen/model/QuantumSimulator.ts` | Pure statevector engine: `applyControlledGate`, `applyColumn`, `simulate`, `computeBlochVectors` |
-| `src/circuit-screen/model/QubitSketchModel.ts` | Circuit state + `placeCell`/`removeCell` + `DerivedProperty` chain (`stateVectorProperty` → `probabilitiesProperty`/`blochVectorsProperty`) |
-| `src/circuit-screen/view/CircuitScreenView.ts` | Top-level view, 3-column layout, drag layer |
-| `src/circuit-screen/view/CircuitCanvas.ts` | Qubit wires, control dots + connectors, click-to-place, `slotIndexAt` (drop hit-test) |
-| `src/circuit-screen/view/GatePalettePanel.ts` | Gate/control/eraser palette; **drag-to-place** via `DragListener` |
-| `src/circuit-screen/view/GateNode.ts` | Colored rectangle + label for a single gate |
+| `src/circuit-screen/model/GateType.ts` | `GateType` const-enum + **discriminated-union `CircuitCell`** (empty/gate/control/antiControl/controlledTarget/swap/paramGate), `SelectedTool`, `RotationTool`/`RotationAxis`, `isAnyControl`, endianness note |
+| `src/circuit-screen/model/GateMatrices.ts` | 2×2 complex unitaries per gate + `rotationMatrix(axis, θ)` (`scenerystack/dot` `Complex`) |
+| `src/circuit-screen/model/QuantumSimulator.ts` | Pure statevector engine: `applyControlledGate` (on/off controls), `applySwap`, `cellMatrix`, `applyColumn`, `simulate`, `computeBlochVectors` |
+| `src/circuit-screen/model/QubitSketchModel.ts` | Circuit state + `placeCell`/`removeCell`/`setCircuit`/`setCellTheta` + undo/redo history + `selectedCellProperty` + `DerivedProperty` chain (`stateVectorProperty` → `probabilitiesProperty`/`blochVectorsProperty`) |
+| `src/circuit-screen/model/{CircuitSerializer,CircuitUrlSync}.ts` | Circuit ↔ compact string; two-way URL-hash sync (shareable links) |
+| `src/circuit-screen/view/CircuitScreenView.ts` | Top-level view, 3-column layout, drag/tooltip layers, undo/redo buttons + keyboard, inspector mount |
+| `src/circuit-screen/view/CircuitCanvas.ts` | Qubit wires, control/swap connectors, click-to-place, `slotIndexAt` (drop hit-test), rotation selection ring |
+| `src/circuit-screen/view/GatePalettePanel.ts` | 2-column gate/control/swap/rotation/eraser palette; **drag-to-place** via `DragListener`; hover matrix tooltips |
+| `src/circuit-screen/view/GateNode.ts` | Colored rectangle + label for a single gate (`GATE_LABEL_MAP`); `RotationGateNode` for Rx/Ry/Rz |
+| `src/circuit-screen/view/{GateInspectorNode,MatrixTooltipNode}.ts` | Rotation-angle slider; hover 2×2-matrix tooltip |
 | `src/circuit-screen/view/SimulationPanel.ts` | Right-side `sun.Panel` hosting the four state displays |
 | `src/circuit-screen/view/{ProbabilityBarsNode,AmplitudeTableNode,BlochSpheresNode,MeasurementHistogramNode}.ts` | The four live displays |
 | `src/circuit-screen/view/displayUtils.ts` | Ket label + complex/phase formatting helpers |
@@ -57,18 +59,29 @@ brand.ts → splash.ts → assert.ts → init.ts
 | Pauli-Z | Z | Phase flip: \|1⟩→-\|1⟩ |
 | Phase | S | Adds π/2 phase to \|1⟩ |
 | T gate | T | Adds π/4 phase to \|1⟩ |
+| S-dagger | S† (`Sdg`) | Inverse phase: adds −π/2 phase to \|1⟩ |
+| T-dagger | T† (`Tdg`) | Inverse T: adds −π/4 phase to \|1⟩ |
+| √X | √X (`Vx`) | Square root of NOT (X = √X·√X) |
+| Rx/Ry/Rz | Rx/Ry/Rz | Parametrized rotation about X/Y/Z by an angle θ (set via the inspector slider) |
 | Control | • | Makes the gate in the same column controlled (CNOT = control + X; CCX = two controls + X) |
+| Anti-control | ◦ | Conditions the column's gate on \|0⟩ instead of \|1⟩ |
+| Swap | ✕ | Two endpoints in a column exchange those qubits |
 
 ## Interaction Model
 
-- **Drag-to-place**: drag a gate/control from the palette onto any slot (`DragListener`)
+- **Drag-to-place**: drag a gate/control/swap/rotation from the palette onto any slot (`DragListener`)
 - **Click-to-place** (fallback): select a tool, then click a slot
 - **Toggle**: clicking a slot occupied by the *same* gate removes it
-- **Eraser**: select the ✕ tool, then click any slot to clear it
-- **Controls**: a control dot (•) in a column makes that column's gate controlled
+- **Eraser**: select the ✕ eraser tool, then click any slot to clear it
+- **Controls**: a control dot (•) or anti-control (◦) in a column makes that column's gate controlled
+- **Swap**: place two swap endpoints (✕) in one column to exchange those wires
+- **Rotation angle**: click a placed Rx/Ry/Rz gate to open the angle slider below the circuit
+- **Tooltips**: hover a palette gate to see its 2×2 matrix + description
+- **Undo/redo**: toolbar ↶/↷ buttons or Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z also redoes)
+- **Shareable links**: the circuit is encoded in the URL hash (`#circuit=…`)
 - **Qubit count**: use +/− buttons above the circuit (1–5 qubits)
 - **Measure**: samples one outcome from the final state into a histogram (does not collapse)
-- **Reset All**: clears the circuit and resets all controls to defaults
+- **Reset All**: clears the circuit, history, and resets all controls to defaults
 
 ## Endianness
 
@@ -79,19 +92,26 @@ Keep simulator and displays consistent with this.
 ## Extending
 
 ### Adding a new gate type
-1. Add the key to `GateType` in `src/circuit-screen/model/GateType.ts`
+1. Add the (ASCII) key to `GateType` in `src/circuit-screen/model/GateType.ts`
 2. Add its 2×2 matrix to `GATE_MATRICES` in `src/circuit-screen/model/GateMatrices.ts`
 3. Add a `ProfileColorProperty` entry to `src/QubitSketchColors.ts`
-4. Add the color mapping to `GATE_COLOR_MAP` in `src/circuit-screen/view/GateNode.ts`
+4. Add the color mapping to `GATE_COLOR_MAP` **and** the display glyph to `GATE_LABEL_MAP` in
+   `src/circuit-screen/view/GateNode.ts` (the label is decoupled from the key so it can be `S†`, `√X`, …)
 5. Add the gate to `ALL_TOOLS` in `src/circuit-screen/view/GatePalettePanel.ts`
-   (it becomes controllable automatically when a control dot shares its column)
+   (it becomes controllable automatically when a control/anti-control shares its column)
+6. Add a one-line description under `descriptions` in **both** `strings_en.json`/`strings_fr.json`
+   and to `getToolDescriptions()` in `StringManager.ts` (drives the hover tooltip)
+7. The `CircuitSerializer` token map round-trips `gate`/`controlledTarget` by key automatically; add a
+   token only if you introduce a brand-new `CircuitCell` *kind*
 
 ### Scope / Non-Goals (vs Quirk)
 This is a **teaching** tool. Deliberately not implemented (see `README.md` for the full list):
-WebGL/GPU sim (CPU only, **≤5 qubits**); arithmetic/modular/QFT/Grover gates; parametrized or
-time-animated gates; density-matrix display; true 3D Bloch sphere (2D projection only);
-custom-gate forge; anti-controls; SWAP/iSWAP; mid-circuit collapsing measurement. **One target
-gate per column when controls are present** (multiple control dots → Toffoli/CCX is supported).
+WebGL/GPU sim (CPU only, **≤5 qubits**); arithmetic/modular/QFT/Grover gates; **time-animated**
+gates (parametrized Rx/Ry/Rz *are* supported, but with a static angle — no spinning `X^t`);
+density-matrix display; true 3D Bloch sphere (2D projection only); custom-gate forge; JSON
+import/export UI (circuits *are* shareable via the URL hash); mid-circuit collapsing measurement.
+**One target gate per column when controls are present** (multiple control dots → Toffoli/CCX is
+supported; controlled-SWAP/Fredkin is not).
 
 ## Common Commands
 

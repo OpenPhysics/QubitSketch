@@ -1,0 +1,70 @@
+/**
+ * CircuitUrlSync.ts
+ *
+ * Two-way sync between the model's circuit and the URL hash (`#circuit=<encoded>`),
+ * so a circuit is shareable just by copying the address bar. On load the hash is
+ * parsed into the model; on every edit the model is written back to the hash via
+ * history.replaceState (no new browser-history entries — in-app undo handles that).
+ */
+import { deserialize, serialize } from "./CircuitSerializer.js";
+import type { QubitSketchModel } from "./QubitSketchModel.js";
+
+const HASH_KEY = "circuit";
+
+function isEmptyCircuit(circuit: ReadonlyArray<ReadonlyArray<{ kind: string }>>): boolean {
+  return circuit.every((row) => row.every((cell) => cell.kind === "empty"));
+}
+
+/** Parses the current URL hash into the model, if it carries a valid circuit. */
+function load(model: QubitSketchModel): void {
+  const raw = window.location.hash.replace(/^#/, "");
+  if (raw === "") {
+    return;
+  }
+  const encoded = new URLSearchParams(raw).get(HASH_KEY);
+  if (encoded === null) {
+    return;
+  }
+  const parsed = deserialize(encoded);
+  if (parsed === null) {
+    return;
+  }
+  // Set directly (not via setQubitCount/placeCell) so loading does not create undo history.
+  model.qubitCountProperty.value = parsed.qubitCount;
+  model.setCircuit(parsed.circuit);
+}
+
+/**
+ * Wires URL ↔ model syncing. Safe to call once at model creation. No-op outside a browser.
+ */
+export function attachUrlSync(model: QubitSketchModel): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  let suppress = false;
+
+  const save = (): void => {
+    if (suppress) {
+      return;
+    }
+    const { pathname, search } = window.location;
+    if (isEmptyCircuit(model.circuitProperty.value)) {
+      // Keep a clean URL for an empty circuit.
+      window.history.replaceState(null, "", pathname + search);
+      return;
+    }
+    const encoded = encodeURIComponent(serialize(model.circuitProperty.value, model.qubitCountProperty.value));
+    window.history.replaceState(null, "", `${pathname}${search}#${HASH_KEY}=${encoded}`);
+  };
+
+  // Initial load must not echo back out as a save.
+  suppress = true;
+  load(model);
+  suppress = false;
+
+  // Mirror every subsequent change to the URL. circuitProperty.link fires immediately,
+  // publishing the just-loaded circuit to the hash.
+  model.circuitProperty.link(save);
+  model.qubitCountProperty.lazyLink(save);
+}
