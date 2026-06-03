@@ -38,6 +38,20 @@
     "load": "Charger",
     "error": "Impossible d’analyser le code OpenQASM"
   },
+  "examples": {
+    "label": "Circuits d’exemple",
+    "choose": "Choisir un circuit…",
+    "bell": "État de Bell (2q)",
+    "ghz": "État GHZ (3q)",
+    "chsh": "Inégalité de Bell / CHSH (2q)",
+    "teleport": "Téléportation (3q)",
+    "superdense": "Codage superdense (2q)",
+    "eraser": "Gomme à choix différé (2q)",
+    "symmetry": "Brisure de symétrie (2q)",
+    "grover": "Recherche de Grover (2q)",
+    "qft": "Transformée de Fourier quantique (3q)",
+    "adder": "Additionneur réversible (3q)"
+  },
   "descriptions": {
     "H": "Hadamard — crée une superposition égale",
     "X": "Pauli-X — inversion de bit (NON quantique)",

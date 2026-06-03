@@ -38,6 +38,20 @@
     "load": "Load",
     "error": "Could not parse OpenQASM"
   },
+  "examples": {
+    "label": "Example Circuits",
+    "choose": "Choose a circuit…",
+    "bell": "Bell State (2q)",
+    "ghz": "GHZ State (3q)",
+    "chsh": "Bell Inequality / CHSH (2q)",
+    "teleport": "Teleportation (3q)",
+    "superdense": "Superdense Coding (2q)",
+    "eraser": "Delayed-Choice Eraser (2q)",
+    "symmetry": "Symmetry Breaking (2q)",
+    "grover": "Grover Search (2q)",
+    "qft": "Quantum Fourier Transform (3q)",
+    "adder": "Reversible Half-Adder (3q)"
+  },
   "descriptions": {
     "H": "Hadamard — creates an equal superposition",
     "X": "Pauli-X — bit flip (quantum NOT)",

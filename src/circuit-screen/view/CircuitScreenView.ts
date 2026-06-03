@@ -18,6 +18,7 @@ import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import { CIRCUIT_CANVAS_HEIGHT, CIRCUIT_CANVAS_WIDTH, CircuitCanvas } from "./CircuitCanvas.js";
+import { ExampleCircuitsComboBox } from "./ExampleCircuitsComboBox.js";
 import { GateInspectorNode } from "./GateInspectorNode.js";
 import { GatePalettePanel } from "./GatePalettePanel.js";
 import { InspectControlNode } from "./InspectControlNode.js";
@@ -44,6 +45,9 @@ export class CircuitScreenView extends ScreenView {
     const dragLayer = new Node({ pickable: false });
     // Layer for hover tooltips (kept above everything else).
     const tooltipLayer = new Node({ pickable: false });
+    // Layer for the Example-circuits dropdown list. Unlike the layers above it must stay
+    // interactive (the list items are clickable), so it is not pickable:false.
+    const popupLayer = new Node();
 
     // ── Gate palette (left side) ──────────────────────────────────────────────
     const palette = new GatePalettePanel(model, {
@@ -76,6 +80,12 @@ export class CircuitScreenView extends ScreenView {
 
     this.addChild(qubitControlNode);
     this.addChild(circuitCanvas);
+
+    // ── Example circuits dropdown (above the qubit-count row) ─────────────────
+    const examplesCombo = new ExampleCircuitsComboBox(model, popupLayer);
+    examplesCombo.left = circuitCanvas.x;
+    examplesCombo.bottom = qubitControlNode.top - 8;
+    this.addChild(examplesCombo);
 
     // ── Undo / redo (next to the qubit-count control) ─────────────────────────
     // Shared styling: a flat (un-gradiented) look, a vivid enabled fill that stands out from
@@ -158,9 +168,10 @@ export class CircuitScreenView extends ScreenView {
     qasmButton.centerY = resetAllButton.centerY;
     this.addChild(qasmButton);
 
-    // Drag previews and tooltips float above all other content.
+    // Drag previews, tooltips, and the dropdown list float above all other content.
     this.addChild(dragLayer);
     this.addChild(tooltipLayer);
+    this.addChild(popupLayer);
   }
 
   /**

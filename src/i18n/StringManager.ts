@@ -127,6 +127,31 @@ export class StringManager {
     };
   }
 
+  /** Label, placeholder, and per-preset names for the Example Circuits dropdown. */
+  public getExampleStrings(): {
+    readonly labelStringProperty: ReadOnlyProperty<string>;
+    readonly chooseStringProperty: ReadOnlyProperty<string>;
+    readonly names: Record<string, ReadOnlyProperty<string>>;
+  } {
+    const e = stringProperties.examples;
+    return {
+      labelStringProperty: e.labelStringProperty,
+      chooseStringProperty: e.chooseStringProperty,
+      names: {
+        bell: e.bellStringProperty,
+        ghz: e.ghzStringProperty,
+        chsh: e.chshStringProperty,
+        teleport: e.teleportStringProperty,
+        superdense: e.superdenseStringProperty,
+        eraser: e.eraserStringProperty,
+        symmetry: e.symmetryStringProperty,
+        grover: e.groverStringProperty,
+        qft: e.qftStringProperty,
+        adder: e.adderStringProperty,
+      },
+    };
+  }
+
   /** One-line descriptions for each palette tool, keyed by {@link SelectedTool}. */
   public getToolDescriptions(): Record<SelectedTool, ReadOnlyProperty<string>> {
     const d = stringProperties.descriptions;
