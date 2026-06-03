@@ -12,7 +12,7 @@
 import type { ReadOnlyProperty } from "scenerystack/axon";
 import { DOM, HBox, Text, VBox } from "scenerystack/scenery";
 import { Dialog } from "scenerystack/sim";
-import { TextPushButton } from "scenerystack/sun";
+import { ButtonNode, TextPushButton } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import { circuitToQasm, qasmToCircuit } from "../model/QasmSerializer.js";
@@ -49,6 +49,7 @@ export function createQasmDialogOpener(model: QubitSketchModel): () => void {
     status = new Text("", { font: "11px sans-serif", fill: QubitSketchColors.textColorProperty });
 
     const copyButton = new TextPushButton(strings.copyStringProperty, {
+      buttonAppearanceStrategy: ButtonNode.FlatAppearanceStrategy,
       listener: () => {
         exportEl.focus();
         exportEl.select();
@@ -67,6 +68,7 @@ export function createQasmDialogOpener(model: QubitSketchModel): () => void {
     });
 
     const loadButton = new TextPushButton(strings.loadStringProperty, {
+      buttonAppearanceStrategy: ButtonNode.FlatAppearanceStrategy,
       listener: () => {
         const parsed = qasmToCircuit(importEl.value);
         if (parsed === null) {
@@ -93,6 +95,12 @@ export function createQasmDialogOpener(model: QubitSketchModel): () => void {
     });
 
     dialog = new Dialog(content, {
+      // The default Dialog background is white, but in the default (dark) theme the title/labels
+      // use a light text color — light-on-white is unreadable. Theme the dialog panel + close
+      // button so the contrast holds in both color profiles (projector was already fine on white).
+      fill: QubitSketchColors.panelBackgroundColorProperty,
+      stroke: QubitSketchColors.panelBorderColorProperty,
+      closeButtonColor: QubitSketchColors.textColorProperty,
       title: new Text(strings.titleStringProperty, {
         font: "bold 16px sans-serif",
         fill: QubitSketchColors.textColorProperty,
