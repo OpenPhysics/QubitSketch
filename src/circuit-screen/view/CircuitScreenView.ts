@@ -197,7 +197,7 @@ export class CircuitScreenView extends ScreenView {
     const plusLabel = new Text("+", {
       font: "bold 20px sans-serif",
       fill: QubitSketchColors.textColorProperty,
-      centerX: BUTTON_SIZE / 2,
+      centerX: plusX + BUTTON_SIZE / 2,
       centerY: BUTTON_SIZE / 2,
       pickable: false,
     });

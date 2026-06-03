@@ -153,6 +153,17 @@ const QubitSketchColors = {
     default: "#1e88e5",
     projector: "#9e9e9e",
   }),
+
+  // Translucent shaded body of the 3D Bloch sphere (main fill + specular highlight)
+  blochSphereFillColorProperty: new ProfileColorProperty(QubitSketchNamespace, "blochSphereFill", {
+    default: "#1e88e5",
+    projector: "#90caf9",
+  }),
+
+  blochSphereHighlightColorProperty: new ProfileColorProperty(QubitSketchNamespace, "blochSphereHighlight", {
+    default: "#bbdefb",
+    projector: "#ffffff",
+  }),
 };
 
 export default QubitSketchColors;

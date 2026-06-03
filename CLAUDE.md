@@ -46,7 +46,9 @@ brand.ts → splash.ts → assert.ts → init.ts
 | `src/circuit-screen/view/GateNode.ts` | Colored rectangle + label for a single gate (`GATE_LABEL_MAP`); `RotationGateNode` for Rx/Ry/Rz |
 | `src/circuit-screen/view/{GateInspectorNode,MatrixTooltipNode}.ts` | Rotation-angle slider; hover 2×2-matrix tooltip |
 | `src/circuit-screen/view/SimulationPanel.ts` | Right-side `sun.Panel` hosting the four state displays |
-| `src/circuit-screen/view/{ProbabilityBarsNode,AmplitudeTableNode,BlochSpheresNode,MeasurementHistogramNode}.ts` | The four live displays |
+| `src/circuit-screen/view/{ProbabilityBarsNode,AmplitudeTableNode,MeasurementHistogramNode}.ts` | Three of the four live displays |
+| `src/circuit-screen/view/BlochSpheresNode.ts` | Bloch display: one large **drag-to-rotate 3D** sphere for the focused qubit + a clickable per-qubit thumbnail row; owns the shared camera (azimuth/elevation) + focus state |
+| `src/circuit-screen/view/BlochSphereNode.ts` | One reusable Bloch sphere: orthographic 3D projection (shaded ball, front/back equator + axes wireframe, depth-faded state arrow); presentation-only `render(vector, azimuth, elevation)` |
 | `src/circuit-screen/view/displayUtils.ts` | Ket label + complex/phase formatting helpers |
 
 ## Supported Gates
@@ -108,8 +110,9 @@ Keep simulator and displays consistent with this.
 This is a **teaching** tool. Deliberately not implemented (see `README.md` for the full list):
 WebGL/GPU sim (CPU only, **≤5 qubits**); arithmetic/modular/QFT/Grover gates; **time-animated**
 gates (parametrized Rx/Ry/Rz *are* supported, but with a static angle — no spinning `X^t`);
-density-matrix display; true 3D Bloch sphere (2D projection only); custom-gate forge; JSON
-import/export UI (circuits *are* shareable via the URL hash); mid-circuit collapsing measurement.
+density-matrix display; custom-gate forge; JSON import/export UI (circuits *are* shareable via
+the URL hash); mid-circuit collapsing measurement. (The Bloch sphere **is** a drag-to-rotate 3D
+orthographic projection now — vector graphics, not a GPU-lit/perspective scene.)
 **One target gate per column when controls are present** (multiple control dots → Toffoli/CCX is
 supported; controlled-SWAP/Fredkin is not).
 

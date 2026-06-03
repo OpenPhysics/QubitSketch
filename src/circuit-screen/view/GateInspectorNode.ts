@@ -37,9 +37,27 @@ export class GateInspectorNode extends Panel {
     });
 
     const slider = new HSlider(angleProperty, new Range(0, TWO_PI), {
-      trackSize: new Dimension2(160, 4),
+      trackSize: new Dimension2(300, 4),
       thumbSize: new Dimension2(14, 26),
+      majorTickLength: 18,
+      majorTickStroke: QubitSketchColors.textColorProperty,
+      minorTickLength: 8,
+      minorTickStroke: QubitSketchColors.textColorProperty,
     });
+
+    // Ticks live in radians (slider range is 0..2π) but read as degrees.
+    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+    const tickLabel = (degrees: number) =>
+      new Text(`${degrees}°`, { font: "10px sans-serif", fill: QubitSketchColors.textColorProperty });
+
+    // Major (labeled) ticks every 45°, minor ticks every 15° in between.
+    for (let degrees = 0; degrees <= 360; degrees += 15) {
+      if (degrees % 45 === 0) {
+        slider.addMajorTick(toRadians(degrees), tickLabel(degrees));
+      } else {
+        slider.addMinorTick(toRadians(degrees));
+      }
+    }
 
     const content = new VBox({ align: "left", spacing: 6, children: [titleText, valueText, slider] });
 

@@ -22,7 +22,8 @@ idiomatically in SceneryStack for teaching.
   displays:
   - **Probabilities** — measurement probability `|amplitude|²` per basis state.
   - **Amplitudes** — the complex amplitude, magnitude, and phase per basis state.
-  - **Bloch spheres** — each qubit's reduced state as a 2D-projected arrow. Under
+  - **Bloch spheres** — one large, **drag-to-rotate 3D** sphere for the focused qubit (click a
+    thumbnail to change focus) plus a per-qubit thumbnail row, all sharing one camera. Under
     entanglement the arrow shrinks toward the center (the reduced state is mixed).
   - **Measurement** — a *Measure* button samples one outcome from the distribution and
     tallies a histogram; with many shots it approaches the probability bars.
@@ -49,8 +50,9 @@ interference, entanglement, measurement). It deliberately omits Quirk's advanced
   animation** (no continuously spinning `X^t`).
 - **No density-matrix display.** A qubit's mixedness is conveyed only by its shortened Bloch
   arrow.
-- **No true 3D Bloch sphere** — a 2D oblique projection is used (Quirk renders a rotatable
-  3D sphere).
+- **The Bloch sphere is an orthographic 3D projection** drawn with vector graphics — a
+  drag-rotatable camera (azimuth + elevation), depth-faded arrow, and front/back wireframe,
+  but no GPU lighting/perspective.
 - **No custom/composite-gate editor** ("forge") and no gate grouping. (Circuits *are* shareable
   via the URL hash, but there is no JSON import/export UI.)
 - **Controls act only within their own column**, and there is **one target gate per column**
@@ -81,7 +83,9 @@ src/circuit-screen/
     GateInspectorNode.ts angle slider for the selected rotation gate
     MatrixTooltipNode.ts hover tooltip showing a gate's 2×2 matrix
     SimulationPanel.ts   hosts the four display nodes (sun.Panel)
-    ProbabilityBarsNode.ts  AmplitudeTableNode.ts  BlochSpheresNode.ts
+    ProbabilityBarsNode.ts  AmplitudeTableNode.ts
+    BlochSpheresNode.ts  big sphere + thumbnail strip + shared drag-rotate camera
+    BlochSphereNode.ts   one orthographically-projected 3D sphere (ball, wireframe, arrow)
     MeasurementHistogramNode.ts  displayUtils.ts
 ```
 

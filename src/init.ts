@@ -18,4 +18,8 @@ init({
   availableLocales: ["en", "fr"],
   splashDataURI: madeWithSceneryStackSplashDataURI,
   allowLocaleSwitching: true,
+  // Register both color profiles so the Projector Mode toggle in the Preferences
+  // dialog has a non-projector + projector pair to switch between. These names must
+  // match the profile keys used in QubitSketchColors.ts ("default"/"projector").
+  colorProfiles: ["default", "projector"],
 });
