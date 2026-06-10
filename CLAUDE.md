@@ -133,7 +133,7 @@ npm start          # dev server (http://localhost:5173)
 npm run build      # type-check + production build
 npm run fix        # biome auto-fix (format + lint)
 npm run check      # tsc type check only
-npm run icons      # regenerate PNG icons from icons/icon.svg
+npm run icons      # regenerate PNG icons from public/icons/icon.svg
 ```
 
 ## Conventions

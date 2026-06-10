@@ -3,8 +3,23 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "A drag-and-drop quantum circuit builder built with SceneryStack.",
+  "description": "Drag-and-drop quantum circuit builder with a live state simulator. Place quantum gates and watch probabilities, amplitudes, Bloch spheres, and measurements update in real time.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OpenPhysics/QubitSketch.git"
+  },
+  "keywords": [
+    "qubit-sketch",
+    "simulation",
+    "SceneryStack",
+    "interactive",
+    "physics",
+    "quantum mechanics",
+    "quantum circuits",
+    "education",
+    "pwa"
+  ],
   "scripts": {
     "start": "vite",
     "dev": "vite",
@@ -27,7 +42,7 @@
     "sharp": "^0.34.5",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.14",
+    "vite": "^8.0.16",
     "vite-plugin-pwa": "^1.3.0"
   },
   "engines": {
