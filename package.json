@@ -1,7 +1,7 @@
 {
   "name": "qubit-sketch",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.0.0",
   "type": "module",
   "description": "Drag-and-drop quantum circuit builder with a live state simulator. Place quantum gates and watch probabilities, amplitudes, Bloch spheres, and measurements update in real time.",
   "license": "MIT",
