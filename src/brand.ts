@@ -13,7 +13,7 @@
  * ── How to customize ─────────────────────────────────────────────────────────
  * - Set `name` to your organization name (shown in About dialog)
  * - Set `copyright` to your copyright string, e.g. "© 2025 My Organization"
- * - Add links to `getLinks()` to show them in the About dialog
+ * - Implement `getLinks(simName, locale)` to return About-dialog links
  * - Replace logo data URIs with your own if desired
  *
  * ── Note on the import path ──────────────────────────────────────────────────
@@ -38,8 +38,8 @@ const Brand: TBrand = {
   // Copyright string shown in the About dialog, or null to omit
   copyright: null,
 
-  // Links shown in the About dialog footer.
-  // Example: [{ text: "My Website", href: "https://example.com" }]
+  // Returns About-dialog footer links for the given sim name and locale.
+  // LinkObject shape: { textStringProperty, url }
   getLinks: () => [],
 
   // Logos shown on dark and light backgrounds respectively.
