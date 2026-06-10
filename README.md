@@ -6,7 +6,7 @@ quantum state update in real time — probabilities, amplitudes, Bloch spheres, 
 measurements. Inspired by [Quirk](https://github.com/Strilanc/Quirk), reimplemented
 idiomatically in SceneryStack for teaching.
 
-## What it does
+## Features
 
 - **Build circuits** by dragging gates from the palette onto the grid, or by selecting a tool
   and clicking a slot. Gates: **H, X, Y, Z, S, T, S†, T†, √X**, plus parametrized rotations
@@ -93,11 +93,43 @@ The simulator is pure (no SceneryStack `Node`/`Property` deps); the model expose
 `stateVectorProperty`, `probabilitiesProperty`, and `blochVectorsProperty` as chained
 `DerivedProperty`s so each display links only to the slice it needs and updates automatically.
 
-## Common commands
+## Quick Start
 
 ```bash
-npm start          # dev server (http://localhost:5173)
-npm run build      # type-check + production build
-npm run fix        # biome auto-fix (format + lint)
-npm run check      # tsc type check only
+npm install
+npm run icons    # generate PNG icons from public/icons/icon.svg
+npm start        # dev server → http://localhost:5173
 ```
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm start` / `npm run dev` | Start Vite dev server |
+| `npm run build` | Type-check + production build → `dist/` |
+| `npm run preview` | Preview the production build locally |
+| `npm run check` | TypeScript type check |
+| `npm run lint` | Biome lint check |
+| `npm run format` | Auto-format all files |
+| `npm run fix` | Lint + auto-fix |
+| `npm run icons` | Regenerate PWA icons from `public/icons/icon.svg` |
+| `npm run clean` | Remove `dist/` |
+
+## Tech Stack
+
+| Tool | Version | Purpose |
+|---|---|---|
+| [SceneryStack](https://scenerystack.org/) | ^3.0.0 | Simulation framework |
+| [Vite](https://vitejs.dev/) | ^8 | Build tool + dev server |
+| [TypeScript](https://www.typescriptlang.org/) | ^6 | Type-safe JavaScript |
+| [Biome](https://biomejs.dev/) | ^2.4 | Linting + formatting |
+| [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) | ^1 | PWA + service worker |
+
+## License
+
+MIT
+
+## Contributing
+
+See [OpenPhysics contributing guidelines](https://github.com/OpenPhysics/.github/blob/main/CONTRIBUTING.md).
+Report bugs via GitHub Issues; use org issue templates.
