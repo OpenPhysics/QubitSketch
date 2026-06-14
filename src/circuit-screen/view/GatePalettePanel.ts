@@ -141,6 +141,8 @@ export class GatePalettePanel extends Node {
       const hitArea = new Rectangle(btnX, btnY, BUTTON_SIZE, BUTTON_SIZE, {
         fill: "rgba(0,0,0,0)",
         cursor: "pointer",
+        tagName: "button",
+        accessibleName: descriptions[tool],
       });
 
       if (overlayLayer !== undefined) {

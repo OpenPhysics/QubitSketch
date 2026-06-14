@@ -47,6 +47,7 @@ export class ExampleCircuitsComboBox extends HBox {
       cornerRadius: 4,
       xMargin: 10,
       yMargin: 6,
+      accessibleName: strings.labelStringProperty,
     });
 
     super({

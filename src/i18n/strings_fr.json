@@ -76,6 +76,13 @@
       "controlArea": "Les commandes choisissent une porte ou un outil, règlent le nombre de qubits, placent des portes sur le circuit, annulent et rétablissent, chargent des exemples, parcourent le circuit, et exportent ou importent le circuit. Un bouton Tout réinitialiser ramène la simulation à son état initial.",
       "interactionHint": "Choisissez une porte et placez-la sur la grille du circuit, puis observez la mise à jour du vecteur d'état et des probabilités."
     },
-    "currentDetails": "Le circuit comporte {{qubits}} qubits."
+    "currentDetails": "Le circuit comporte {{qubits}} qubits.",
+    "controls": {
+      "undo": "Annuler",
+      "redo": "Rétablir",
+      "previousStep": "Étape précédente",
+      "nextStep": "Étape suivante",
+      "blochSphere": "Sphère de Bloch — faites glisser pour faire tourner l'état du qubit"
+    }
   }
 }

@@ -16,6 +16,7 @@
 import { Multilink, NumberProperty, type ReadOnlyProperty } from "scenerystack/axon";
 import type { Vector3 } from "scenerystack/dot";
 import { Circle, DragListener, Node, Rectangle, Text } from "scenerystack/scenery";
+import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import { BlochSphereNode } from "./BlochSphereNode.js";
 
@@ -71,6 +72,9 @@ export class BlochSpheresNode extends Node {
       centerY: BIG_RADIUS + 2,
       fill: "rgba(0,0,0,0)",
       cursor: "pointer",
+      tagName: "div",
+      focusable: true,
+      accessibleName: StringManager.getInstance().getA11yStrings().controls.blochSphereStringProperty,
     });
     dragArea.addInputListener(
       new DragListener({

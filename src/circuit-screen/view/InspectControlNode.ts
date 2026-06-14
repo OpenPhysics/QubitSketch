@@ -23,6 +23,7 @@ export class InspectControlNode extends HBox {
   public constructor(model: QubitSketchModel) {
     const { inspectStepProperty: stepProperty, circuitDepthProperty: depthProperty } = model;
     const strings = StringManager.getInstance().getInspectStrings();
+    const a11yControls = StringManager.getInstance().getA11yStrings().controls;
 
     // The column the readout/playhead currently sits at: the cursor, or the full depth when live.
     const shownColumn = (): number => stepProperty.value ?? depthProperty.value;
@@ -49,6 +50,7 @@ export class InspectControlNode extends HBox {
         [stepProperty, depthProperty],
         (step, depth) => depth > 0 && (step ?? depth) > 0,
       ),
+      accessibleName: a11yControls.previousStepStringProperty,
     });
 
     const nextButton = new RectangularPushButton({
@@ -61,6 +63,7 @@ export class InspectControlNode extends HBox {
       },
       // Forward only makes sense while inspecting (live already sits at the end).
       enabledProperty: new DerivedProperty([stepProperty], (step) => step !== null),
+      accessibleName: a11yControls.nextStepStringProperty,
     });
 
     const readout = new Text("", {

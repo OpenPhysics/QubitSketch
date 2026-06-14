@@ -76,6 +76,13 @@
       "controlArea": "The controls choose a gate or tool, set the number of qubits, place gates on the circuit, undo and redo, load examples, step through the circuit, and export or import the circuit. A Reset All button returns the simulation to its starting state.",
       "interactionHint": "Choose a gate and place it on the circuit grid, then watch the statevector and probabilities update."
     },
-    "currentDetails": "The circuit has {{qubits}} qubits."
+    "currentDetails": "The circuit has {{qubits}} qubits.",
+    "controls": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "previousStep": "Previous step",
+      "nextStep": "Next step",
+      "blochSphere": "Bloch sphere — drag to rotate the qubit state"
+    }
   }
 }

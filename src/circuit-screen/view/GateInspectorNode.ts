@@ -37,6 +37,7 @@ export class GateInspectorNode extends Panel {
     });
 
     const slider = new HSlider(angleProperty, new Range(0, TWO_PI), {
+      accessibleName: angleStringProperty,
       trackSize: new Dimension2(300, 4),
       thumbSize: new Dimension2(14, 26),
       majorTickLength: 18,

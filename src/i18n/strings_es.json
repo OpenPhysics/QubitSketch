@@ -76,6 +76,13 @@
       "controlArea": "Los controles eligen una compuerta o herramienta, ajustan el número de cúbits, colocan compuertas en el circuito, deshacen y rehacen, cargan ejemplos, recorren el circuito, y exportan o importan el circuito. Un botón Restablecer todo devuelve la simulación a su estado inicial.",
       "interactionHint": "Elige una compuerta y colócala en la cuadrícula del circuito, luego observa cómo se actualizan el vector de estado y las probabilidades."
     },
-    "currentDetails": "El circuito tiene {{qubits}} cúbits."
+    "currentDetails": "El circuito tiene {{qubits}} cúbits.",
+    "controls": {
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "previousStep": "Paso anterior",
+      "nextStep": "Paso siguiente",
+      "blochSphere": "Esfera de Bloch — arrastra para rotar el estado del qubit"
+    }
   }
 }

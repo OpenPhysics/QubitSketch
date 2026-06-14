@@ -97,17 +97,20 @@ export class CircuitScreenView extends ScreenView {
       disabledColor: QubitSketchColors.buttonDisabledColorProperty,
       buttonAppearanceStrategy: FlatAppearanceStrategy,
     } as const;
+    const a11yControls = StringManager.getInstance().getA11yStrings().controls;
     const undoButton = new RectangularPushButton({
       ...buttonAppearance,
       content: new Text("↶", { font: "bold 18px sans-serif", fill: QubitSketchColors.textColorProperty }),
       listener: () => model.undo(),
       enabledProperty: model.canUndoProperty,
+      accessibleName: a11yControls.undoStringProperty,
     });
     const redoButton = new RectangularPushButton({
       ...buttonAppearance,
       content: new Text("↷", { font: "bold 18px sans-serif", fill: QubitSketchColors.textColorProperty }),
       listener: () => model.redo(),
       enabledProperty: model.canRedoProperty,
+      accessibleName: a11yControls.redoStringProperty,
     });
     undoButton.left = qubitControlNode.right + 24;
     undoButton.centerY = qubitControlNode.centerY;
