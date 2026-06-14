@@ -41,6 +41,13 @@ Qubit 0 = LSB: basis index `i` has bit `q` set iff `(i >> q) & 1`. Kets display 
 3. Add to `ALL_TOOLS` in `GatePalettePanel.ts`
 4. Description in locale JSON + `StringManager.getToolDescriptions()`
 
+## Accessibility
+
+Follows the shared [OpenPhysics accessibility convention](https://github.com/OpenPhysics/OpenPhysics/blob/main/ACCESSIBILITY.md).
+`CircuitScreenView` registers `CircuitScreenSummaryContent` (live current-details: qubit count)
+via the `screenSummaryContent` super-option, and orders the PDOM through a wrapper `Node`. A11y
+strings live under the top-level `a11y` key in each locale JSON, via `StringManager.getA11yStrings()`.
+
 ## Non-goals
 
 CPU only (no WebGL sim); no arithmetic/QFT/Grover gates; no time-animated gates; no density matrix; no mid-circuit collapsing measurement; one target gate per column when controls present.

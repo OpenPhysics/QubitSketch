@@ -18,6 +18,7 @@ import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import { CIRCUIT_CANVAS_HEIGHT, CIRCUIT_CANVAS_WIDTH, CircuitCanvas } from "./CircuitCanvas.js";
+import { CircuitScreenSummaryContent } from "./CircuitScreenSummaryContent.js";
 import { ExampleCircuitsComboBox } from "./ExampleCircuitsComboBox.js";
 import { GateInspectorNode } from "./GateInspectorNode.js";
 import { GatePalettePanel } from "./GatePalettePanel.js";
@@ -29,7 +30,7 @@ const MARGIN = 20;
 
 export class CircuitScreenView extends ScreenView {
   public constructor(model: QubitSketchModel, options?: ScreenViewOptions) {
-    super(options);
+    super({ ...options, screenSummaryContent: new CircuitScreenSummaryContent(model) });
 
     // ── Background ────────────────────────────────────────────────────────────
     const background = new Rectangle(0, 0, this.layoutBounds.width, this.layoutBounds.height, {
@@ -172,6 +173,27 @@ export class CircuitScreenView extends ScreenView {
     this.addChild(dragLayer);
     this.addChild(tooltipLayer);
     this.addChild(popupLayer);
+
+    // ── Accessibility: keyboard / reading traversal order ───────────────────────
+    // Deterministic Tab/reading order: tools, qubit count, the circuit grid,
+    // examples, undo/redo, inspect controls, export, and Reset All last.
+    // ScreenView throws if you set pdomOrder on itself, so use a wrapper Node.
+    this.addChild(
+      new Node({
+        pdomOrder: [
+          palette,
+          qubitControlNode,
+          circuitCanvas,
+          examplesCombo,
+          undoButton,
+          redoButton,
+          inspectControl,
+          inspector,
+          qasmButton,
+          resetAllButton,
+        ],
+      }),
+    );
   }
 
   /**

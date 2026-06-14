@@ -69,5 +69,13 @@
     "antiControl": "Anti-contrôle — conditionne la porte de la colonne sur |0⟩",
     "swap": "Échange — permute deux qubits (placez-en deux)",
     "eraser": "Gomme — efface une cellule"
+  },
+  "a11y": {
+    "screenSummary": {
+      "playArea": "La zone de jeu est une grille de circuit quantique où des portes sont placées sur des fils de qubits. Des panneaux montrent le vecteur d'état résultant, les probabilités de mesure et les sphères de Bloch par qubit.",
+      "controlArea": "Les commandes choisissent une porte ou un outil, règlent le nombre de qubits, placent des portes sur le circuit, annulent et rétablissent, chargent des exemples, parcourent le circuit, et exportent ou importent le circuit. Un bouton Tout réinitialiser ramène la simulation à son état initial.",
+      "interactionHint": "Choisissez une porte et placez-la sur la grille du circuit, puis observez la mise à jour du vecteur d'état et des probabilités."
+    },
+    "currentDetails": "Le circuit comporte {{qubits}} qubits."
   }
 }

@@ -69,5 +69,13 @@
     "antiControl": "Anticontrol — condiciona la puerta de la columna a |0⟩",
     "swap": "Swap — intercambia dos cúbits (coloca dos)",
     "eraser": "Borrador — vacía una celda"
+  },
+  "a11y": {
+    "screenSummary": {
+      "playArea": "El área de juego es una cuadrícula de circuito cuántico donde se colocan compuertas en los cables de los cúbits. Los paneles muestran el vector de estado resultante, las probabilidades de medición y las esferas de Bloch por cúbit.",
+      "controlArea": "Los controles eligen una compuerta o herramienta, ajustan el número de cúbits, colocan compuertas en el circuito, deshacen y rehacen, cargan ejemplos, recorren el circuito, y exportan o importan el circuito. Un botón Restablecer todo devuelve la simulación a su estado inicial.",
+      "interactionHint": "Elige una compuerta y colócala en la cuadrícula del circuito, luego observa cómo se actualizan el vector de estado y las probabilidades."
+    },
+    "currentDetails": "El circuito tiene {{qubits}} cúbits."
   }
 }

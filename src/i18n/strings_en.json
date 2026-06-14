@@ -69,5 +69,13 @@
     "antiControl": "Anti-control — conditions the column's gate on |0⟩",
     "swap": "Swap — exchanges two qubits (place two)",
     "eraser": "Eraser — clears a cell"
+  },
+  "a11y": {
+    "screenSummary": {
+      "playArea": "The play area is a quantum circuit grid where gates are placed on qubit wires. Panels show the resulting statevector, measurement probabilities, and per-qubit Bloch spheres.",
+      "controlArea": "The controls choose a gate or tool, set the number of qubits, place gates on the circuit, undo and redo, load examples, step through the circuit, and export or import the circuit. A Reset All button returns the simulation to its starting state.",
+      "interactionHint": "Choose a gate and place it on the circuit grid, then watch the statevector and probabilities update."
+    },
+    "currentDetails": "The circuit has {{qubits}} qubits."
   }
 }
