@@ -19,13 +19,19 @@ import { onReadyToLaunch, PreferencesModel, Sim } from "scenerystack/sim";
 import { Tandem } from "scenerystack/tandem";
 import { CircuitScreen } from "./circuit-screen/CircuitScreen.js";
 import { StringManager } from "./i18n/StringManager.js";
+import { QubitSketchPreferencesModel } from "./preferences/QubitSketchPreferencesModel.js";
+import { QubitSketchPreferencesNode } from "./preferences/QubitSketchPreferencesNode.js";
 import QubitSketchColors from "./QubitSketchColors.js";
 
 onReadyToLaunch(() => {
   const stringManager = StringManager.getInstance();
 
+  // Simulation-specific preferences; initial values come from qubitSketchQueryParameters.
+  const qubitSketchPreferences = new QubitSketchPreferencesModel(Tandem.ROOT.createTandem("preferences"));
+
   const screens = [
     new CircuitScreen({
+      preferences: qubitSketchPreferences,
       // The screen name Property updates automatically when the locale changes
       name: stringManager.getScreenNames().circuitStringProperty,
       tandem: Tandem.ROOT.createTandem("circuitScreen"),
@@ -40,6 +46,13 @@ onReadyToLaunch(() => {
         supportsProjectorMode: true,
         // Enables keyboard-navigation highlight outlines
         supportsInteractiveHighlights: true,
+      },
+      simulationOptions: {
+        customPreferences: [
+          {
+            createContent: (tandem: Tandem) => new QubitSketchPreferencesNode(qubitSketchPreferences, tandem),
+          },
+        ],
       },
       localizationOptions: {
         // Adds a language picker in Preferences → Language

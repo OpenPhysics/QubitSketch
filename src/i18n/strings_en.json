@@ -84,5 +84,9 @@
       "nextStep": "Next step",
       "blochSphere": "Bloch sphere — drag to rotate the qubit state"
     }
+  },
+  "preferences": {
+    "title": "Simulation",
+    "qubitCount": "Number of Qubits"
   }
 }

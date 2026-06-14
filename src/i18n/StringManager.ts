@@ -187,4 +187,9 @@ export class StringManager {
       eraser: d.eraserStringProperty,
     };
   }
+
+  /** Simulation-specific preference labels shown in Preferences → Simulation. */
+  public getPreferences() {
+    return stringProperties.preferences;
+  }
 }

@@ -84,5 +84,9 @@
       "nextStep": "Paso siguiente",
       "blochSphere": "Esfera de Bloch — arrastra para rotar el estado del qubit"
     }
+  },
+  "preferences": {
+    "title": "Simulación",
+    "qubitCount": "Número de cúbits"
   }
 }

@@ -17,6 +17,8 @@ import { BooleanProperty, DerivedProperty, NumberProperty, Property, type ReadOn
 import type { Complex, Vector3 } from "scenerystack/dot";
 import { Range } from "scenerystack/dot";
 import type { TModel } from "scenerystack/joist";
+import type { QubitSketchPreferencesModel } from "../../preferences/QubitSketchPreferencesModel.js";
+import qubitSketchQueryParameters from "../../preferences/qubitSketchQueryParameters.js";
 import type { CircuitCell, GateType, SelectedTool } from "./GateType.js";
 import { EMPTY_CELL, isAnyControl, MAX_QUBITS, MIN_QUBITS, NUM_STEPS, ROTATION_TOOL_AXIS } from "./GateType.js";
 import { computeBlochVectors, simulate } from "./QuantumSimulator.js";
@@ -28,7 +30,7 @@ export type GridPosition = { readonly qubit: number; readonly step: number };
 type CircuitSnapshot = { readonly circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>; readonly qubitCount: number };
 
 export class QubitSketchModel implements TModel {
-  public readonly qubitCountProperty = new NumberProperty(3, {
+  public readonly qubitCountProperty = new NumberProperty(qubitSketchQueryParameters.qubits, {
     range: new Range(MIN_QUBITS, MAX_QUBITS),
     numberType: "Integer",
   });
@@ -73,7 +75,13 @@ export class QubitSketchModel implements TModel {
   private lastHistoryKey: string | null = null;
   private static readonly MAX_HISTORY = 100;
 
-  public constructor() {
+  private readonly preferences: QubitSketchPreferencesModel | undefined;
+
+  public constructor(preferences?: QubitSketchPreferencesModel) {
+    this.preferences = preferences;
+    if (preferences) {
+      this.qubitCountProperty.value = preferences.qubitCountProperty.value;
+    }
     this.circuitProperty = new Property<ReadonlyArray<ReadonlyArray<CircuitCell>>>(QubitSketchModel.emptyCircuit());
 
     this.stateVectorProperty = new DerivedProperty(
@@ -318,6 +326,9 @@ export class QubitSketchModel implements TModel {
   public reset(): void {
     this.applyingHistory = true;
     this.qubitCountProperty.reset();
+    if (this.preferences) {
+      this.qubitCountProperty.value = this.preferences.qubitCountProperty.value;
+    }
     this.selectedToolProperty.reset();
     this.selectedCellProperty.reset();
     this.inspectStepProperty.reset();
