@@ -12,6 +12,7 @@
  */
 import type { ReadOnlyProperty } from "scenerystack/axon";
 import type { Complex } from "scenerystack/dot";
+import { toFixed } from "scenerystack/dot";
 import { Node, Rectangle, Text } from "scenerystack/scenery";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import { ketLabel, phaseToColor } from "./displayUtils.js";
@@ -75,7 +76,7 @@ export class ProbabilityBarsNode extends Node {
           );
         }
         barsLayer.addChild(
-          new Text(`${(p * 100).toFixed(0)}%`, {
+          new Text(`${toFixed(p * 100, 0)}%`, {
             font,
             fill: QubitSketchColors.textColorProperty,
             left: trackLeft + trackWidth + 6,

@@ -10,6 +10,7 @@
  */
 import type { ReadOnlyProperty } from "scenerystack/axon";
 import type { Complex } from "scenerystack/dot";
+import { toFixed } from "scenerystack/dot";
 import { Node, Text } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
@@ -83,7 +84,7 @@ export class AmplitudeTableNode extends Node {
 
         body.addChild(new Text(ketLabel(i, n), { font, fill, left: COL_STATE, centerY: y }));
         body.addChild(new Text(formatComplex(amp), { font, fill, left: colAmplitude, centerY: y }));
-        body.addChild(new Text(amp.magnitude.toFixed(2), { font, fill, left: colMagnitude, centerY: y }));
+        body.addChild(new Text(toFixed(amp.magnitude, 2), { font, fill, left: colMagnitude, centerY: y }));
         body.addChild(new Text(formatPhase(amp), { font, fill, left: colPhase, centerY: y }));
       }
     });

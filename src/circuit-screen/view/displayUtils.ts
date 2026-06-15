@@ -4,6 +4,7 @@
  * Small formatting helpers shared by the simulation display nodes.
  */
 import type { Complex } from "scenerystack/dot";
+import { toFixed } from "scenerystack/dot";
 import { Color } from "scenerystack/scenery";
 import { twilightColor } from "./twilightColormap.js";
 
@@ -38,8 +39,8 @@ export function ketLabel(i: number, n: number): string {
 
 /** Formats a complex amplitude as "a+bi" with fixed precision (e.g. "0.71+0.00i"). */
 export function formatComplex(c: Complex, digits = 2): string {
-  const re = c.real.toFixed(digits);
-  const im = Math.abs(c.imaginary).toFixed(digits);
+  const re = toFixed(c.real, digits);
+  const im = toFixed(Math.abs(c.imaginary), digits);
   const sign = c.imaginary < 0 ? "−" : "+";
   return `${re}${sign}${im}i`;
 }
@@ -50,5 +51,5 @@ export function formatPhase(c: Complex, threshold = 1e-9): string {
     return "—";
   }
   const deg = (c.phase() * 180) / Math.PI;
-  return `${deg.toFixed(0)}°`;
+  return `${toFixed(deg, 0)}°`;
 }
