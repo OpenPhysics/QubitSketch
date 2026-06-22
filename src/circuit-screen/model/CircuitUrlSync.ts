@@ -29,9 +29,8 @@ function load(model: QubitSketchModel): void {
   if (parsed === null) {
     return;
   }
-  // Set directly (not via setQubitCount/placeCell) so loading does not create undo history.
-  model.qubitCountProperty.value = parsed.qubitCount;
-  model.setCircuit(parsed.circuit);
+  // restoreCircuit applies the grid + qubit count without creating undo history.
+  model.restoreCircuit(parsed.circuit, parsed.qubitCount);
 }
 
 /**
