@@ -3,6 +3,10 @@
   "screens": {
     "circuit": "Circuito"
   },
+  "qubitSelector": {
+    "qubitCountSingularPattern": "{{count}} cúbit",
+    "qubitCountPluralPattern": "{{count}} cúbits"
+  },
   "displays": {
     "probabilities": "Probabilidades",
     "amplitudes": "Amplitudes",

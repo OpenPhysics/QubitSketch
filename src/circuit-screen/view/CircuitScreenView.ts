@@ -9,6 +9,8 @@
  *   - Qubit count row    — above the circuit (+ / − buttons + count display)
  *   - Reset All button   — bottom-right corner (PhET convention)
  */
+import { DerivedProperty } from "scenerystack/axon";
+import { StringUtils } from "scenerystack/phetcommon";
 import { Node, Rectangle, Text } from "scenerystack/scenery";
 import { ResetAllButton } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
@@ -243,7 +245,16 @@ export class CircuitScreenView extends ScreenView {
     });
     container.addChild(readoutBox);
 
-    const readoutText = new Text("3 qubits", {
+    const qubitSelectorStrings = StringManager.getInstance().getQubitSelectorStrings();
+    const readoutStringProperty = new DerivedProperty(
+      [
+        model.qubitCountProperty,
+        qubitSelectorStrings.qubitCountSingularPatternStringProperty,
+        qubitSelectorStrings.qubitCountPluralPatternStringProperty,
+      ],
+      (count, singular, plural) => StringUtils.fillIn(count === 1 ? singular : plural, { count }),
+    );
+    const readoutText = new Text(readoutStringProperty, {
       font: "14px sans-serif",
       fill: QubitSketchColors.textColorProperty,
       centerX: readoutX + READOUT_WIDTH / 2,
@@ -274,9 +285,8 @@ export class CircuitScreenView extends ScreenView {
     });
     container.addChild(plusBox);
 
-    // Keep readout text in sync
-    model.qubitCountProperty.link((count) => {
-      readoutText.string = `${count} qubit${count === 1 ? "" : "s"}`;
+    // Re-center the readout whenever its text changes (qubit count or locale).
+    readoutStringProperty.link(() => {
       readoutText.centerX = readoutX + READOUT_WIDTH / 2;
     });
 

@@ -49,6 +49,21 @@ export class StringManager {
     return stringProperties.a11y;
   }
 
+  /**
+   * Qubit-count selector readout. Two patterns (singular/plural) keep the count
+   * grammatically correct down to "1 qubit"; the fleet uses simple {{count}}
+   * patterns rather than ICU plurals.
+   */
+  public getQubitSelectorStrings(): {
+    readonly qubitCountSingularPatternStringProperty: ReadOnlyProperty<string>;
+    readonly qubitCountPluralPatternStringProperty: ReadOnlyProperty<string>;
+  } {
+    return {
+      qubitCountSingularPatternStringProperty: stringProperties.qubitSelector.qubitCountSingularPatternStringProperty,
+      qubitCountPluralPatternStringProperty: stringProperties.qubitSelector.qubitCountPluralPatternStringProperty,
+    };
+  }
+
   public getScreenNames(): {
     readonly circuitStringProperty: ReadOnlyProperty<string>;
   } {
