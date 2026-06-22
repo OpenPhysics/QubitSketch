@@ -30,10 +30,13 @@ export type GridPosition = { readonly qubit: number; readonly step: number };
 type CircuitSnapshot = { readonly circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>; readonly qubitCount: number };
 
 export class QubitSketchModel implements TModel {
-  public readonly qubitCountProperty = new NumberProperty(qubitSketchQueryParameters.qubits, {
+  private readonly _qubitCountProperty = new NumberProperty(qubitSketchQueryParameters.qubits, {
     range: new Range(MIN_QUBITS, MAX_QUBITS),
     numberType: "Integer",
   });
+
+  /** Number of visible qubit wires (1–MAX_QUBITS). Mutate via setQubitCount/loadCircuit/reset. */
+  public readonly qubitCountProperty: ReadOnlyProperty<number> = this._qubitCountProperty;
 
   public readonly selectedToolProperty: Property<SelectedTool> = new Property<SelectedTool>("H");
 
@@ -48,8 +51,11 @@ export class QubitSketchModel implements TModel {
    */
   public readonly inspectStepProperty: Property<number | null> = new Property<number | null>(null);
 
-  /** circuit[qubitIndex][stepIndex] */
-  public readonly circuitProperty: Property<ReadonlyArray<ReadonlyArray<CircuitCell>>>;
+  /** Backing store for the circuit grid; mutated only through this model's methods. */
+  private readonly _circuitProperty: Property<ReadonlyArray<ReadonlyArray<CircuitCell>>>;
+
+  /** circuit[qubitIndex][stepIndex] — read-only; mutate via placeCell/loadCircuit/undo/redo/etc. */
+  public readonly circuitProperty: ReadOnlyProperty<ReadonlyArray<ReadonlyArray<CircuitCell>>>;
 
   /** Live statevector — recomputed whenever the circuit or qubit count changes. */
   public readonly stateVectorProperty: ReadOnlyProperty<Complex[]>;
@@ -64,8 +70,10 @@ export class QubitSketchModel implements TModel {
   public readonly circuitDepthProperty: ReadOnlyProperty<number>;
 
   /** Whether there is undo/redo history available (drives toolbar button enablement). */
-  public readonly canUndoProperty = new BooleanProperty(false);
-  public readonly canRedoProperty = new BooleanProperty(false);
+  private readonly _canUndoProperty = new BooleanProperty(false);
+  private readonly _canRedoProperty = new BooleanProperty(false);
+  public readonly canUndoProperty: ReadOnlyProperty<boolean> = this._canUndoProperty;
+  public readonly canRedoProperty: ReadOnlyProperty<boolean> = this._canRedoProperty;
 
   private readonly past: CircuitSnapshot[] = [];
   private readonly future: CircuitSnapshot[] = [];
@@ -80,9 +88,10 @@ export class QubitSketchModel implements TModel {
   public constructor(preferences?: QubitSketchPreferencesModel) {
     this.preferences = preferences;
     if (preferences) {
-      this.qubitCountProperty.value = preferences.qubitCountProperty.value;
+      this._qubitCountProperty.value = preferences.qubitCountProperty.value;
     }
-    this.circuitProperty = new Property<ReadonlyArray<ReadonlyArray<CircuitCell>>>(QubitSketchModel.emptyCircuit());
+    this._circuitProperty = new Property<ReadonlyArray<ReadonlyArray<CircuitCell>>>(QubitSketchModel.emptyCircuit());
+    this.circuitProperty = this._circuitProperty;
 
     this.stateVectorProperty = new DerivedProperty(
       [this.circuitProperty, this.qubitCountProperty, this.inspectStepProperty],
@@ -121,6 +130,11 @@ export class QubitSketchModel implements TModel {
 
   private static emptyCircuit(): ReadonlyArray<ReadonlyArray<CircuitCell>> {
     return Array.from({ length: MAX_QUBITS }, () => Array.from({ length: NUM_STEPS }, (): CircuitCell => EMPTY_CELL));
+  }
+
+  /** Rounds and clamps a requested qubit count into the supported [MIN_QUBITS, MAX_QUBITS] range. */
+  private static clampQubitCount(count: number): number {
+    return Math.max(MIN_QUBITS, Math.min(MAX_QUBITS, Math.round(count)));
   }
 
   /** True if any cell in the given step (column) is a control of either polarity (• or ◦). */
@@ -210,47 +224,43 @@ export class QubitSketchModel implements TModel {
 
   /** Sets the qubit count (clamped to range), recording an undo step. */
   public setQubitCount(count: number): void {
-    const clamped = Math.max(MIN_QUBITS, Math.min(MAX_QUBITS, count));
+    const clamped = QubitSketchModel.clampQubitCount(count);
     if (clamped === this.qubitCountProperty.value) {
       return;
     }
     this.inspectStepProperty.value = null;
     this.pushHistory();
-    this.qubitCountProperty.value = clamped;
+    this._qubitCountProperty.value = clamped;
   }
 
-  public setCell(qubitIndex: number, stepIndex: number, cell: CircuitCell): void {
+  /** Writes a single cell, replacing the grid immutably. Low-level — does not record history. */
+  private setCell(qubitIndex: number, stepIndex: number, cell: CircuitCell): void {
     const updated = this.circuitProperty.value.map((row, q) =>
       q === qubitIndex ? row.map((c, s) => (s === stepIndex ? cell : c)) : row,
     );
-    this.circuitProperty.set(updated);
-  }
-
-  /** Clears a single cell (used by drag-off-grid deletion). */
-  public removeCell(qubitIndex: number, stepIndex: number): void {
-    this.setCell(qubitIndex, stepIndex, EMPTY_CELL);
-  }
-
-  /** Replaces the entire circuit grid in a single update (used by URL load and undo/redo). */
-  public setCircuit(grid: ReadonlyArray<ReadonlyArray<CircuitCell>>): void {
-    this.circuitProperty.set(grid);
+    this._circuitProperty.set(updated);
   }
 
   /**
-   * Replaces both the grid and qubit count as a single undoable action (used by QASM import).
-   * Leaves step-through inspect mode and clears any rotation selection.
+   * Replaces both the grid and qubit count as a single undoable action (used by QASM import and
+   * example presets). Leaves step-through inspect mode and clears any rotation selection.
    */
   public loadCircuit(grid: ReadonlyArray<ReadonlyArray<CircuitCell>>, qubitCount: number): void {
     this.inspectStepProperty.value = null;
     this.selectedCellProperty.value = null;
     this.pushHistory();
-    this.qubitCountProperty.value = Math.max(MIN_QUBITS, Math.min(MAX_QUBITS, Math.round(qubitCount)));
-    this.circuitProperty.set(grid);
+    this._qubitCountProperty.value = QubitSketchModel.clampQubitCount(qubitCount);
+    this._circuitProperty.set(grid);
   }
 
-  public clearCircuit(): void {
-    this.selectedCellProperty.value = null;
-    this.circuitProperty.set(QubitSketchModel.emptyCircuit());
+  /**
+   * Restores a grid and qubit count *without* recording undo history — for URL-hash restore at
+   * startup, where the loaded state is the baseline rather than an undoable edit. For an undoable
+   * load (QASM import, example presets) use {@link loadCircuit} instead.
+   */
+  public restoreCircuit(grid: ReadonlyArray<ReadonlyArray<CircuitCell>>, qubitCount: number): void {
+    this._qubitCountProperty.value = QubitSketchModel.clampQubitCount(qubitCount);
+    this._circuitProperty.set(grid);
   }
 
   // ── Undo / redo ─────────────────────────────────────────────────────────────
@@ -285,8 +295,8 @@ export class QubitSketchModel implements TModel {
   private applySnapshot(snap: CircuitSnapshot): void {
     this.applyingHistory = true;
     this.selectedCellProperty.value = null;
-    this.qubitCountProperty.value = snap.qubitCount;
-    this.circuitProperty.set(snap.circuit);
+    this._qubitCountProperty.value = snap.qubitCount;
+    this._circuitProperty.set(snap.circuit);
     this.applyingHistory = false;
     this.lastHistoryKey = null;
   }
@@ -312,8 +322,8 @@ export class QubitSketchModel implements TModel {
   }
 
   private updateUndoRedoEnabled(): void {
-    this.canUndoProperty.value = this.past.length > 0;
-    this.canRedoProperty.value = this.future.length > 0;
+    this._canUndoProperty.value = this.past.length > 0;
+    this._canRedoProperty.value = this.future.length > 0;
   }
 
   private clearHistory(): void {
@@ -325,14 +335,14 @@ export class QubitSketchModel implements TModel {
 
   public reset(): void {
     this.applyingHistory = true;
-    this.qubitCountProperty.reset();
+    this._qubitCountProperty.reset();
     if (this.preferences) {
-      this.qubitCountProperty.value = this.preferences.qubitCountProperty.value;
+      this._qubitCountProperty.value = this.preferences.qubitCountProperty.value;
     }
     this.selectedToolProperty.reset();
     this.selectedCellProperty.reset();
     this.inspectStepProperty.reset();
-    this.circuitProperty.set(QubitSketchModel.emptyCircuit());
+    this._circuitProperty.set(QubitSketchModel.emptyCircuit());
     this.applyingHistory = false;
     this.clearHistory();
   }
