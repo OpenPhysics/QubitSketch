@@ -18,6 +18,7 @@ import { ScreenView } from "scenerystack/sim";
 import { FlatAppearanceStrategy, RectangularPushButton } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { QUBIT_COUNT_CONTROL, SCREEN_VIEW_MARGIN } from "../../QubitSketchConstants.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import { CIRCUIT_CANVAS_HEIGHT, CIRCUIT_CANVAS_WIDTH, CircuitCanvas } from "./CircuitCanvas.js";
 import { CircuitScreenSummaryContent } from "./CircuitScreenSummaryContent.js";
@@ -27,8 +28,6 @@ import { GatePalettePanel } from "./GatePalettePanel.js";
 import { InspectControlNode } from "./InspectControlNode.js";
 import { createQasmDialogOpener } from "./QasmDialog.js";
 import { SimulationPanel } from "./SimulationPanel.js";
-
-const MARGIN = 20;
 
 export class CircuitScreenView extends ScreenView {
   public constructor(model: QubitSketchModel, options?: ScreenViewOptions) {
@@ -58,22 +57,22 @@ export class CircuitScreenView extends ScreenView {
       dropTarget: circuitCanvas,
       overlayLayer: tooltipLayer,
     });
-    palette.left = MARGIN;
+    palette.left = SCREEN_VIEW_MARGIN;
     palette.centerY = this.layoutBounds.centerY;
     this.addChild(palette);
 
     // ── Simulation panel (right side) ─────────────────────────────────────────
     const simulationPanel = new SimulationPanel(model);
-    simulationPanel.right = this.layoutBounds.maxX - MARGIN;
-    simulationPanel.top = MARGIN;
+    simulationPanel.right = this.layoutBounds.maxX - SCREEN_VIEW_MARGIN;
+    simulationPanel.top = SCREEN_VIEW_MARGIN;
     this.addChild(simulationPanel);
 
     // ── Qubit count control (above circuit) ───────────────────────────────────
     const qubitControlNode = this.buildQubitCountControl(model);
 
     // Position circuit canvas: centered horizontally between the palette and the panel
-    const availableLeft = palette.right + MARGIN;
-    const availableRight = simulationPanel.left - MARGIN;
+    const availableLeft = palette.right + SCREEN_VIEW_MARGIN;
+    const availableRight = simulationPanel.left - SCREEN_VIEW_MARGIN;
     const circuitX = availableLeft + (availableRight - availableLeft - CIRCUIT_CANVAS_WIDTH) / 2;
     circuitCanvas.x = circuitX;
     circuitCanvas.y = this.layoutBounds.centerY - CIRCUIT_CANVAS_HEIGHT / 2 + 20;
@@ -155,8 +154,8 @@ export class CircuitScreenView extends ScreenView {
         model.reset();
         this.reset();
       },
-      right: this.layoutBounds.maxX - MARGIN,
-      bottom: this.layoutBounds.maxY - MARGIN,
+      right: this.layoutBounds.maxX - SCREEN_VIEW_MARGIN,
+      bottom: this.layoutBounds.maxY - SCREEN_VIEW_MARGIN,
     });
     this.addChild(resetAllButton);
 
@@ -205,11 +204,7 @@ export class CircuitScreenView extends ScreenView {
    * Builds the qubit count control: a "−" button, a count readout, and a "+" button.
    */
   private buildQubitCountControl(model: QubitSketchModel): Node {
-    const BUTTON_SIZE = 28;
-    const BUTTON_RADIUS = 4;
-    const READOUT_WIDTH = 80;
-    const READOUT_HEIGHT = 28;
-    const SPACING = 6;
+    const { BUTTON_SIZE, BUTTON_RADIUS, READOUT_WIDTH, READOUT_HEIGHT, SPACING } = QUBIT_COUNT_CONTROL;
 
     const container = new Node();
 
