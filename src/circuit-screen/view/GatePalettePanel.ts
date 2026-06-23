@@ -91,6 +91,9 @@ export class GatePalettePanel extends Node {
     const hideTooltip = (): void => {
       if (activeTooltip !== null && overlayLayer !== undefined) {
         overlayLayer.removeChild(activeTooltip);
+        // removeChild does not dispose: the tooltip links to global
+        // QubitSketchColors Properties, so dispose it to release those links.
+        activeTooltip.dispose();
         activeTooltip = null;
       }
     };
@@ -107,8 +110,7 @@ export class GatePalettePanel extends Node {
       activeTooltip = tooltip;
     };
 
-    for (let i = 0; i < ALL_TOOLS.length; i++) {
-      const tool = ALL_TOOLS[i]!;
+    for (const [i, tool] of ALL_TOOLS.entries()) {
       const col = i % COLUMNS;
       const row = Math.floor(i / COLUMNS);
       const btnX = PANEL_PADDING + col * (BUTTON_SIZE + BUTTON_GAP);
@@ -163,34 +165,45 @@ export class GatePalettePanel extends Node {
         // Drag a copy onto the grid; a plain click (no drop on a slot) just selects.
         let preview: Node | null = null;
         const { dragLayer, dropTarget } = dragContext;
-        hitArea.addInputListener(
-          new DragListener({
-            start: (event) => {
-              hideTooltip();
-              model.selectedToolProperty.value = tool;
-              preview = makeToolNode(tool, BUTTON_SIZE);
-              preview.opacity = 0.85;
-              dragLayer.addChild(preview);
+        // Remove and dispose the floating preview. removeChild does not dispose,
+        // and the preview links to global QubitSketchColors Properties, so it
+        // must be disposed or it accumulates across drags.
+        const clearPreview = (): void => {
+          if (preview !== null) {
+            dragLayer.removeChild(preview);
+            preview.dispose();
+            preview = null;
+          }
+        };
+        const dragListener = new DragListener({
+          start: (event) => {
+            hideTooltip();
+            model.selectedToolProperty.value = tool;
+            preview = makeToolNode(tool, BUTTON_SIZE);
+            preview.opacity = 0.85;
+            dragLayer.addChild(preview);
+            preview.center = dragLayer.globalToLocalPoint(event.pointer.point);
+          },
+          drag: (event) => {
+            if (preview !== null) {
               preview.center = dragLayer.globalToLocalPoint(event.pointer.point);
-            },
-            drag: (event) => {
-              if (preview !== null) {
-                preview.center = dragLayer.globalToLocalPoint(event.pointer.point);
-              }
-            },
-            end: (event) => {
-              const slot =
-                event === null ? null : dropTarget.slotIndexAt(event.pointer.point, model.qubitCountProperty.value);
-              if (slot !== null) {
-                model.placeCell(slot.qubit, slot.step);
-              }
-              if (preview !== null) {
-                dragLayer.removeChild(preview);
-                preview = null;
-              }
-            },
-          }),
-        );
+            }
+          },
+          end: (event) => {
+            const slot =
+              event === null ? null : dropTarget.slotIndexAt(event.pointer.point, model.qubitCountProperty.value);
+            if (slot !== null) {
+              model.placeCell(slot.qubit, slot.step);
+            }
+            clearPreview();
+          },
+        });
+        hitArea.addInputListener(dragListener);
+        // Tear down the drag listener and any in-flight preview on disposal.
+        this.disposeEmitter.addListener(() => {
+          dragListener.dispose();
+          clearPreview();
+        });
       }
       this.addChild(hitArea);
 
@@ -198,11 +211,45 @@ export class GatePalettePanel extends Node {
     }
 
     // Keep highlight in sync with the selected tool
-    model.selectedToolProperty.link((activeTool) => {
+    const selectedToolListener = (activeTool: SelectedTool): void => {
       for (const entry of buttonEntries) {
         entry.highlight.visible = entry.tool === activeTool;
       }
+    };
+    model.selectedToolProperty.link(selectedToolListener);
+    this.disposeEmitter.addListener(() => {
+      model.selectedToolProperty.unlink(selectedToolListener);
+      // Drop any tooltip still floating in the overlay layer.
+      hideTooltip();
     });
+  }
+
+  public override dispose(): void {
+    // Node.dispose() does not recurse into children, so every descendant
+    // Rectangle/Text/GateNode that links to a global QubitSketchColors Property
+    // would keep this panel reachable. Dispose the whole child subtree first,
+    // then super.dispose() fires disposeEmitter (unlinking the model listener
+    // and disposing the drag listeners).
+    for (const child of [...this.children]) {
+      disposeSubtree(child);
+    }
+    super.dispose();
+  }
+}
+
+/**
+ * Disposes `node` and all its descendants, leaves-first, so their links to the
+ * global QubitSketchColors Properties are removed. Scenery's Node.dispose()
+ * does not recurse into children, and every palette button is built from plain
+ * Rectangle/Text/Circle/Line/GateNode nodes (no self-disposing composites), so
+ * a depth-first dispose is safe here.
+ */
+function disposeSubtree(node: Node): void {
+  for (const child of [...node.children]) {
+    disposeSubtree(child);
+  }
+  if (!node.isDisposed) {
+    node.dispose();
   }
 }
 
