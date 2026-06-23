@@ -3,6 +3,7 @@
  *
  * Wires together the QubitSketchModel and CircuitScreenView as a SceneryStack Screen.
  */
+import { type EmptySelfOptions, optionize } from "scenerystack/phet-core";
 import type { ScreenOptions } from "scenerystack/sim";
 import { Screen } from "scenerystack/sim";
 import type { Tandem } from "scenerystack/tandem";
@@ -27,11 +28,13 @@ export class CircuitScreen extends Screen<QubitSketchModel, CircuitScreenView> {
         new CircuitScreenView(model, {
           tandem: options.tandem.createTandem("view"),
         }),
-      {
-        backgroundColorProperty: QubitSketchColors.backgroundColorProperty,
-        createKeyboardHelpNode: () => new QubitSketchKeyboardHelpContent(),
-        ...options,
-      },
+      optionize<CircuitScreenOptions, EmptySelfOptions, ScreenOptions>()(
+        {
+          backgroundColorProperty: QubitSketchColors.backgroundColorProperty,
+          createKeyboardHelpNode: () => new QubitSketchKeyboardHelpContent(),
+        },
+        options,
+      ),
     );
   }
 }
