@@ -10,6 +10,7 @@ Drag-and-drop quantum circuit builder with live CPU statevector simulation (≤ 
 
 | File | Purpose |
 |---|---|
+| `src/QubitSketchConstants.ts` | Sim-wide layout constants (margins, control sizes, canvas dimensions) |
 | `src/circuit-screen/model/GateType.ts` | Gate types + discriminated-union `CircuitCell` |
 | `src/circuit-screen/model/GateMatrices.ts` | 2×2 unitaries + `rotationMatrix(axis, θ)` |
 | `src/circuit-screen/model/QuantumSimulator.ts` | Pure statevector engine (no Scenery deps) |
@@ -47,6 +48,10 @@ Follows the shared [OpenPhysics accessibility convention](https://github.com/Ope
 `CircuitScreenView` registers `CircuitScreenSummaryContent` (live current-details: qubit count)
 via the `screenSummaryContent` super-option, and orders the PDOM through a wrapper `Node`. A11y
 strings live under the top-level `a11y` key in each locale JSON, via `StringManager.getA11yStrings()`.
+
+## Disposal and leak tests
+
+`GatePalettePanel.dispose()` is required when tearing down the palette: it unlinks `selectedToolProperty`, disposes drag listeners, and depth-first disposes children (drag previews and tooltips link to global color Properties). `tests/memory-leak.test.ts` verifies collectibility after dispose via `WeakRef` + forced GC — use it as the template for any future dynamic view nodes.
 
 ## Non-goals
 

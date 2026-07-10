@@ -15,7 +15,7 @@ The simulation follows a modular architecture:
 
 ### Coordinate System
 
-The circuit uses a fixed virtual canvas (`CIRCUIT_CANVAS_WIDTH` × `CIRCUIT_CANVAS_HEIGHT`) with grid-based placement rather than physical model-view units.
+The circuit uses a fixed virtual canvas (`CIRCUIT_CANVAS_WIDTH` × `CIRCUIT_CANVAS_HEIGHT` in `CircuitCanvas.ts`) with grid-based placement rather than physical model-view units. Sim-wide layout spacing (margins, qubit-count control sizes) lives in `src/QubitSketchConstants.ts`.
 
 ## Model Components
 
@@ -75,4 +75,8 @@ Gate and UI colors live in `QubitSketchColors.ts`. Phase and amplitude displays 
 
 The legacy `Quirk/` subfolder is upstream reference material, not part of the active sim.
 
-Note that no dispose functions have been used, which should be addressed.
+### Disposal and memory-leak regression
+
+`GatePalettePanel` is the only view that adds/removes nodes at runtime (drag previews, hover tooltips) and links to the shared model's `selectedToolProperty`. Its `dispose()` unlinks that listener, disposes drag listeners, and depth-first disposes the child subtree so global `QubitSketchColors` Properties are not retained.
+
+`tests/memory-leak.test.ts` exercises this pattern: allocate panel + model under a function boundary, call `dispose()`, force GC (`--expose-gc` via vitest config), and assert collectibility via `WeakRef`. Follow this pattern when adding other dynamic view nodes.
