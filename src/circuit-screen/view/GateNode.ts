@@ -60,7 +60,7 @@ export class GateNode extends Node {
     const text = GATE_LABEL_MAP[gateType];
     this.label = new Text(text, {
       font: labelFont(text, size),
-      fill: "white",
+      fill: QubitSketchColors.onGateTextColorProperty,
       centerX: size / 2,
       centerY: size / 2,
     });
@@ -109,7 +109,7 @@ export class RotationGateNode extends Node {
     this.addChild(
       new Text(rotationLabel(axis), {
         font: `bold ${Math.floor(size * 0.34)}px monospace`,
-        fill: "white",
+        fill: QubitSketchColors.onGateTextColorProperty,
         centerX: size / 2,
         centerY: showAngle ? size * 0.36 : size / 2,
       }),
@@ -120,7 +120,7 @@ export class RotationGateNode extends Node {
       this.addChild(
         new Text(`${deg}°`, {
           font: `${Math.floor(size * 0.24)}px sans-serif`,
-          fill: "white",
+          fill: QubitSketchColors.onGateTextColorProperty,
           centerX: size / 2,
           centerY: size * 0.7,
         }),

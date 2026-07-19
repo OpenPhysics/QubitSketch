@@ -261,7 +261,7 @@ function makeToolNode(tool: SelectedTool, size: number): Node {
     node.addChild(
       new Text("✕", {
         font: `bold ${Math.floor(size * 0.44)}px sans-serif`,
-        fill: "white",
+        fill: QubitSketchColors.onGateTextColorProperty,
         centerX: size / 2,
         centerY: size / 2,
       }),

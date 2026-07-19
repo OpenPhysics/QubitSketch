@@ -147,9 +147,16 @@ const QubitSketchColors = {
     projector: "#0d47a1",
   }),
 
+  // Eraser tool / Clear-shots button — kept light enough for onGateText (≥3:1).
   eraserColorProperty: new ProfileColorProperty(QubitSketchNamespace, "eraser", {
-    default: "#546e7a",
-    projector: "#455a64",
+    default: "#90a4ae",
+    projector: "#78909c",
+  }),
+
+  // Labels drawn on gate tiles and Measure/Clear buttons (dark on light fills).
+  onGateTextColorProperty: new ProfileColorProperty(QubitSketchNamespace, "onGateText", {
+    default: "#1a1a1a",
+    projector: "#1a1a1a",
   }),
 
   // Control dot (•) and the vertical connector line linking it to its target

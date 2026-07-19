@@ -52,7 +52,10 @@ export class MeasurementHistogramNode extends Node {
     });
 
     const measureButton = new RectangularPushButton({
-      content: new Text(labels.measureStringProperty, { font: "13px sans-serif", fill: "white" }),
+      content: new Text(labels.measureStringProperty, {
+        font: "13px sans-serif",
+        fill: QubitSketchColors.onGateTextColorProperty,
+      }),
       baseColor: QubitSketchColors.histogramBarColorProperty,
       buttonAppearanceStrategy: FlatAppearanceStrategy,
       listener: () => {
@@ -64,7 +67,10 @@ export class MeasurementHistogramNode extends Node {
     });
 
     const clearButton = new RectangularPushButton({
-      content: new Text(labels.clearShotsStringProperty, { font: "13px sans-serif", fill: "white" }),
+      content: new Text(labels.clearShotsStringProperty, {
+        font: "13px sans-serif",
+        fill: QubitSketchColors.onGateTextColorProperty,
+      }),
       baseColor: QubitSketchColors.eraserColorProperty,
       buttonAppearanceStrategy: FlatAppearanceStrategy,
       left: measureButton.right + 8,
