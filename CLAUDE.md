@@ -4,43 +4,40 @@ Sim-specific context for AI assistants. General SceneryStack guidance: [OpenPhys
 
 ## Project
 
-Drag-and-drop quantum circuit builder with live CPU statevector simulation (≤ 5 qubits). Pedagogical reimplementation of [Quirk](https://github.com/Strilanc/Quirk)'s core. See `README.md` for feature list and scope limits vs Quirk.
+Drag-and-drop **quantum circuit builder** with live CPU statevector simulation (≤ 5 qubits). Pedagogical reimplementation of [Quirk](https://github.com/Strilanc/Quirk)'s core — superposition, entanglement, and unitary gates on a grid of qubit wires.
+
+Physics for educators: `doc/model.md`. Architecture: `doc/implementation-notes.md`.
 
 ## Key files
 
-| File | Purpose |
+| Area | Location |
 |---|---|
-| `src/QubitSketchConstants.ts` | Sim-wide layout constants (margins, control sizes, canvas dimensions) |
-| `src/circuit-screen/model/GateType.ts` | Gate types + discriminated-union `CircuitCell` |
-| `src/circuit-screen/model/GateMatrices.ts` | 2×2 unitaries + `rotationMatrix(axis, θ)` |
-| `src/circuit-screen/model/QuantumSimulator.ts` | Pure statevector engine (no Scenery deps) |
-| `src/circuit-screen/model/QubitSketchModel.ts` | Circuit state, undo/redo, inspect step, derived properties |
-| `src/circuit-screen/model/{CircuitSerializer,CircuitUrlSync,QasmSerializer}.ts` | URL hash + OpenQASM 2.0 import/export |
-| `src/circuit-screen/view/CircuitCanvas.ts` | Grid, connectors, click/drag placement |
-| `src/circuit-screen/view/GatePalettePanel.ts` | Palette + drag-to-place |
-| `src/circuit-screen/view/BlochSpheresNode.ts` | Drag-rotate 3D Bloch display |
+| Screen | `src/circuit-screen/CircuitScreen.ts` |
+| Model | `model/QubitSketchModel.ts`, `QuantumSimulator.ts` (pure engine), `GateType.ts`, `GateMatrices.ts`, `CircuitSerializer.ts`, `CircuitUrlSync.ts`, `QasmSerializer.ts` |
+| View | `view/CircuitScreenView.ts`, `CircuitCanvas.ts`, `GatePalettePanel.ts`, `BlochSpheresNode.ts`, `CircuitScreenSummaryContent.ts` |
+| Constants / colors | `src/QubitSketchConstants.ts`, `QubitSketchColors.ts`, `src/i18n/StringManager.ts` |
 
-## Supported gates
+## Model
 
-H, X, Y, Z, S, T, S†, T†, √X, Rx/Ry/Rz, control (•), anti-control (◦), swap (✕). Multiple controls in one column → Toffoli (CCX). **No controlled-SWAP (Fredkin).**
+`QubitSketchModel implements TModel`. Circuit grid `circuit[qubit][step]` holds `CircuitCell` gate placements; `QuantumSimulator.simulate` recomputes derived state.
 
-## Interaction model
+| Property | Type | Meaning |
+|---|---|---|
+| `qubitCountProperty` | `ReadOnlyProperty<number>` | 1–MAX_QUBITS wires |
+| `selectedToolProperty` | `Property<SelectedTool>` | active palette tool (gate, control, eraser) |
+| `circuitProperty` | `ReadOnlyProperty<CircuitCell[][]>` | 2-D grid; mutate via model methods only |
+| `stateVectorProperty` | derived | complex amplitudes, length 2ⁿ |
+| `probabilitiesProperty` | derived | \|αₖ\|² per basis state |
+| `blochVectorsProperty` | derived | per-qubit reduced Bloch vector (length < 1 ⇒ entangled) |
+| `inspectStepProperty` | `Property<number \| null>` | step-through inspect cursor (excluded from undo/URL) |
+| `canUndoProperty` / `canRedoProperty` | derived | history availability |
 
-- Drag or click-to-place; eraser clears slots; rotation gate opens angle slider
-- Undo/redo (Ctrl+Z / Ctrl+Y); step-through inspect (◀/▶/Live) scrubs `inspectStepProperty`
-- URL hash `#circuit=…` shares circuits; QASM dialog for export/import (teaching subset)
-- **Measure** samples histogram only — does not collapse mid-circuit state
+### Simulation rules & numerics
 
-## Endianness
-
-Qubit 0 = LSB: basis index `i` has bit `q` set iff `(i >> q) & 1`. Kets display big-endian `|q_{n-1}…q_0⟩`.
-
-## Adding a gate
-
-1. Key in `GateType.ts` → matrix in `GateMatrices.ts` → color in `QubitSketchColors.ts`
-2. `GATE_COLOR_MAP` + `GATE_LABEL_MAP` in `GateNode.ts`
-3. Add to `ALL_TOOLS` in `GatePalettePanel.ts`
-4. Description in locale JSON + `StringManager.getToolDescriptions()`
+- **Endianness:** qubit 0 = LSB; basis index `i` has bit `q` set iff `(i >> q) & 1`. Kets display big-endian `|q_{n-1}…q_0⟩`.
+- Gates apply column-by-column; multiple controls in one column → Toffoli (CCX). **No controlled-SWAP (Fredkin).**
+- **Measure** samples histogram from \|αₖ\|² but does **not** collapse mid-circuit state.
+- CPU-only statevector (no WebGL sim); no density matrix.
 
 ## Accessibility
 
@@ -59,19 +56,26 @@ Fleet-standard Vitest layout:
 
 | Path | Purpose |
 |---|---|
-| `vitest.config.ts` | Test environment + `setupFiles` when present; `execArgv: ["--expose-gc"]` with memory-leak suite |
-| `tests/setup.ts` | Canvas / AudioContext mocks + `init({ name: "…" })` before SceneryStack imports (when required) |
-| `tests/**/*.test.ts` | Model/physics unit tests — mirror `src/` under `tests/` |
+| `vitest.config.ts` | `happy-dom` environment, `setupFiles`, `execArgv: ["--expose-gc"]` |
+| `tests/setup.ts` | Canvas / AudioContext mocks + `init({ name: "…" })` before SceneryStack imports |
+| `tests/**/*.test.ts` | Model/physics unit tests |
 | `tests/memory-leak.test.ts` | WeakRef + `forceGC` dispose regression (fleet pattern) |
 
-- Put unit tests only under root `tests/` (never co-locate or use `__tests__/`).
-- Run `npm test`. CI runs the suite when a `test` script is present.
-- Expand `memory-leak.test.ts` for components that add/remove nodes or link Properties at runtime (see OpticsLab).
+Actual specs:
 
-## Disposal and leak tests
+- `tests/memory-leak.test.ts` (covers `GatePalettePanel.dispose()` — palette drag previews and tooltips link global color Properties)
 
-`GatePalettePanel.dispose()` is required when tearing down the palette: it unlinks `selectedToolProperty`, disposes drag listeners, and depth-first disposes children (drag previews and tooltips link to global color Properties). `tests/memory-leak.test.ts` verifies collectibility after dispose via `WeakRef` + forced GC — use it as the template for any future dynamic view nodes.
+Run `npm test`. CI runs the suite when a `test` script is present.
 
-## Non-goals
+## Commands
 
-CPU only (no WebGL sim); no arithmetic/QFT/Grover gates; no time-animated gates; no density matrix; no mid-circuit collapsing measurement; one target gate per column when controls present.
+```bash
+npm run lint && npm run check && npm run build
+npm test
+```
+
+## Development notes
+
+- URL hash `#circuit=…` shares circuits; QASM dialog for export/import (teaching subset). Undo/redo (Ctrl+Z / Ctrl+Y); inspect mode scrubs columns without changing stored circuit.
+- **Adding a gate:** key in `GateType.ts` → matrix in `GateMatrices.ts` → color in `QubitSketchColors.ts` → maps in `GateNode.ts` → `ALL_TOOLS` in `GatePalettePanel.ts` → locale JSON + `StringManager.getToolDescriptions()`.
+- Non-goals: arithmetic/QFT/Grover gates; time-animated gates; mid-circuit collapsing measurement; one target gate per column when controls present.
