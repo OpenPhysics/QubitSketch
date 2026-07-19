@@ -86,7 +86,9 @@
       "redo": "Rétablir",
       "previousStep": "Étape précédente",
       "nextStep": "Étape suivante",
-      "blochSphere": "Sphère de Bloch — faites glisser pour faire tourner l'état du qubit"
+      "blochSphere": "Sphère de Bloch — faites glisser pour faire tourner l'état du qubit",
+      "resetAll": "Tout réinitialiser",
+      "openQasm": "Importer et exporter OpenQASM"
     }
   },
   "preferences": {

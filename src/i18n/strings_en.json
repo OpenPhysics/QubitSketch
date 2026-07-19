@@ -86,7 +86,9 @@
       "redo": "Redo",
       "previousStep": "Previous step",
       "nextStep": "Next step",
-      "blochSphere": "Bloch sphere — drag to rotate the qubit state"
+      "blochSphere": "Bloch sphere — drag to rotate the qubit state",
+      "resetAll": "Reset All",
+      "openQasm": "OpenQASM import and export"
     }
   },
   "preferences": {

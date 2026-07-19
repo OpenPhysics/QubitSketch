@@ -158,6 +158,7 @@ export class CircuitScreenView extends ScreenView {
       },
       right: this.layoutBounds.maxX - SCREEN_VIEW_MARGIN,
       bottom: this.layoutBounds.maxY - SCREEN_VIEW_MARGIN,
+      accessibleName: a11yControls.resetAllStringProperty,
     });
     this.addChild(resetAllButton);
 
@@ -170,6 +171,7 @@ export class CircuitScreenView extends ScreenView {
         fill: QubitSketchColors.textColorProperty,
       }),
       listener: openQasmDialog,
+      accessibleName: a11yControls.openQasmStringProperty,
     });
     qasmButton.right = resetAllButton.left - 16;
     qasmButton.centerY = resetAllButton.centerY;
