@@ -16,6 +16,7 @@ import { ResetAllButton } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
 import { ScreenView } from "scenerystack/sim";
 import { FlatAppearanceStrategy, RectangularPushButton } from "scenerystack/sun";
+import { FLAT_RESET_ALL_BUTTON_OPTIONS } from "../../common/QubitSketchButtonOptions.js";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import { QUBIT_COUNT_CONTROL, SCREEN_VIEW_MARGIN } from "../../QubitSketchConstants.js";
@@ -150,6 +151,7 @@ export class CircuitScreenView extends ScreenView {
 
     // ── Reset All button ──────────────────────────────────────────────────────
     const resetAllButton = new ResetAllButton({
+      ...FLAT_RESET_ALL_BUTTON_OPTIONS,
       listener: () => {
         model.reset();
         this.reset();

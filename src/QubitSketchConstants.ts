@@ -6,6 +6,9 @@
  * only view spacing, sizes, and corner radii.
  */
 
+/** Corner radius shared by control panels and dialogs (px). */
+export const PANEL_CORNER_RADIUS = 5;
+
 /** Margin between the ScreenView edges and the top-level panels (px). */
 export const SCREEN_VIEW_MARGIN = 20;
 
