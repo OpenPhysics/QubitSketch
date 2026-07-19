@@ -90,6 +90,32 @@ function gateTarget(cell: CircuitCell, wire: number): GateTarget | null {
   return gate === null ? null : { wire, kind: "gate", gate };
 }
 
+/**
+ * Emits the statements for one controlled column: the controlled operation itself, with
+ * anti-controls (◦) conjugated into positive controls by an x on each side. A gate OpenQASM 2.0
+ * cannot express becomes a single `// unsupported` comment with no stray conjugation around it.
+ */
+function emitControlledColumn(
+  lines: string[],
+  onControls: readonly number[],
+  offControls: readonly number[],
+  target: GateTarget,
+): void {
+  const stmt = controlledStatement([...onControls, ...offControls], target);
+  if (stmt === null) {
+    const label = target.kind === "rot" ? `controlled-${ROT_TO_QASM[target.axis].single}` : `controlled-${target.gate}`;
+    lines.push(`// unsupported in OpenQASM 2.0: ${label} with ${onControls.length + offControls.length} control(s)`);
+    return;
+  }
+  for (const a of offControls) {
+    lines.push(`x q[${a}];`);
+  }
+  lines.push(stmt);
+  for (const a of offControls) {
+    lines.push(`x q[${a}];`);
+  }
+}
+
 /** Emits the statements for one circuit column into `lines`. */
 function columnToQasm(
   circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>,
@@ -130,21 +156,10 @@ function columnToQasm(
 
   if (hasControl) {
     const target = gateTargets[0];
-    if (target === undefined) {
-      return; // stray controls with no target — a no-op, like the simulator
+    if (target !== undefined) {
+      emitControlledColumn(lines, onControls, offControls, target);
     }
-    // Anti-controls (◦) become positive controls conjugated by x on those wires.
-    for (const a of offControls) {
-      lines.push(`x q[${a}];`);
-    }
-    const stmt = controlledStatement([...onControls, ...offControls], target);
-    const label = target.kind === "rot" ? `controlled-${ROT_TO_QASM[target.axis].single}` : `controlled-${target.gate}`;
-    lines.push(
-      stmt ?? `// unsupported in OpenQASM 2.0: ${label} with ${onControls.length + offControls.length} control(s)`,
-    );
-    for (const a of offControls) {
-      lines.push(`x q[${a}];`);
-    }
+    // Stray controls with no target — a no-op, like the simulator.
     return;
   }
 
@@ -278,13 +293,23 @@ function parseOperands(operandStr: string): number[] | null {
   return indices;
 }
 
-/** One parsed operation: cells that must share a column, and the inclusive wire span it reserves. */
-type ParsedOp = { placements: Array<{ wire: number; cell: CircuitCell }>; spanLo: number; spanHi: number };
+/**
+ * One parsed operation: cells that must share a column, and the inclusive wire span it reserves.
+ * `exclusive` ops (a controlled operation or a SWAP pair) must own their whole column — under the
+ * v1 column rules the simulator would silently drop any other gate sharing it.
+ */
+type ParsedOp = {
+  placements: Array<{ wire: number; cell: CircuitCell }>;
+  spanLo: number;
+  spanHi: number;
+  exclusive: boolean;
+};
 
 /** Reserves the inclusive span across the involved wires (so the column's semantics stay intact). */
 function spanOp(placements: Array<{ wire: number; cell: CircuitCell }>): ParsedOp {
   const wires = placements.map((p) => p.wire);
-  return { placements, spanLo: Math.min(...wires), spanHi: Math.max(...wires) };
+  const exclusive = placements.some((p) => p.cell.kind === "control" || p.cell.kind === "swap");
+  return { placements, spanLo: Math.min(...wires), spanHi: Math.max(...wires), exclusive };
 }
 
 /** Turns one gate statement into a {@link ParsedOp}, or null if it is unsupported / malformed. */
@@ -337,6 +362,12 @@ function parseGateStatement(name: string, param: string | undefined, operands: n
   return null;
 }
 
+/** Parses the size out of a `qreg name[N]` declaration body, or null if malformed. */
+function parseQregSize(rest: string): number | null {
+  const reg = rest.match(/^[A-Za-z_]\w*\s*\[\s*(\d+)\s*\]$/);
+  return reg?.[1] === undefined ? null : Number.parseInt(reg[1], 10);
+}
+
 /**
  * Parses an OpenQASM 2.0 program (the subset {@link circuitToQasm} emits, plus common
  * equivalents like `pi`-valued angles) into a circuit grid. Returns null on anything it
@@ -364,14 +395,11 @@ export function qasmToCircuit(qasm: string): { circuit: CircuitCell[][]; qubitCo
     const rest = (m[3] ?? "").trim();
 
     if (name === "qreg") {
-      if (declaredQubits !== null) {
-        return null; // multiple quantum registers are unsupported
-      }
-      const reg = rest.match(/^[A-Za-z_]\w*\s*\[\s*(\d+)\s*\]$/);
-      if (reg === null || reg[1] === undefined) {
+      // Multiple quantum registers are unsupported.
+      declaredQubits = declaredQubits === null ? parseQregSize(rest) : null;
+      if (declaredQubits === null) {
         return null;
       }
-      declaredQubits = Number.parseInt(reg[1], 10);
       continue;
     }
     if (IGNORED_STATEMENTS.has(name)) {
@@ -397,27 +425,43 @@ export function qasmToCircuit(qasm: string): { circuit: CircuitCell[][]; qubitCo
     return null;
   }
 
-  // Greedy column packing: each op takes the earliest column where its whole span is free.
+  const circuit = packOpsIntoColumns(ops);
+  return circuit === null ? null : { circuit, qubitCount };
+}
+
+/**
+ * Greedy column packing: each op takes the earliest column where its whole span is free AND
+ * the column's occupancy is compatible with the v1 column rules — plain single-qubit gates may
+ * share a column, but a controlled op or SWAP pair owns its column outright (the simulator
+ * would silently drop anything else placed there). Skipping ahead is safe: ops that end up in
+ * different columns act on disjoint wires, so they commute. Returns null if the program is
+ * deeper than the fixed grid.
+ */
+function packOpsIntoColumns(ops: readonly ParsedOp[]): CircuitCell[][] | null {
   const circuit: CircuitCell[][] = Array.from({ length: MAX_QUBITS }, () =>
     Array.from({ length: NUM_STEPS }, (): CircuitCell => ({ kind: "empty" })),
   );
   const nextFree: number[] = Array.from({ length: MAX_QUBITS }, () => 0);
+  const columnState: Array<"empty" | "gates" | "exclusive"> = Array.from({ length: NUM_STEPS }, () => "empty");
 
   for (const op of ops) {
     let col = 0;
     for (let w = op.spanLo; w <= op.spanHi; w++) {
       col = Math.max(col, nextFree[w]!);
     }
+    while (col < NUM_STEPS && (columnState[col] === "exclusive" || (op.exclusive && columnState[col] !== "empty"))) {
+      col++;
+    }
     if (col >= NUM_STEPS) {
-      return null; // circuit is deeper than the fixed grid
+      return null;
     }
     for (const { wire, cell } of op.placements) {
       circuit[wire]![col] = cell;
     }
+    columnState[col] = op.exclusive ? "exclusive" : "gates";
     for (let w = op.spanLo; w <= op.spanHi; w++) {
       nextFree[w] = col + 1;
     }
   }
-
-  return { circuit, qubitCount };
+  return circuit;
 }

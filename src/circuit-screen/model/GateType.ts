@@ -66,6 +66,25 @@ export function cellGate(cell: CircuitCell): GateType | null {
   return cell.kind === "gate" || cell.kind === "controlledTarget" ? cell.gate : null;
 }
 
+/** True if the cell applies a 2×2 unitary (a fixed gate, a controlled target, or a rotation). */
+export function isGateBearing(cell: CircuitCell): boolean {
+  return cell.kind === "gate" || cell.kind === "controlledTarget" || cell.kind === "paramGate";
+}
+
+/** Structural equality of two cells (same kind and, where applicable, same gate/axis/angle). */
+export function cellsEqual(a: CircuitCell, b: CircuitCell): boolean {
+  if (a.kind !== b.kind) {
+    return false;
+  }
+  if ((a.kind === "gate" || a.kind === "controlledTarget") && (b.kind === "gate" || b.kind === "controlledTarget")) {
+    return a.gate === b.gate;
+  }
+  if (a.kind === "paramGate" && b.kind === "paramGate") {
+    return a.axis === b.axis && a.theta === b.theta;
+  }
+  return true;
+}
+
 /** A parametrized-rotation placement tool. Maps to a {@link RotationAxis} (Rx→X, Ry→Y, Rz→Z). */
 export type RotationTool = "Rx" | "Ry" | "Rz";
 

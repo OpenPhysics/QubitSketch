@@ -49,12 +49,7 @@ export class SimulationPanel extends Panel {
         ),
         section(
           titles.measurementStringProperty,
-          new MeasurementHistogramNode(
-            model.probabilitiesProperty,
-            model.qubitCountProperty,
-            SIM_PANEL_CONTENT_WIDTH,
-            MEASUREMENT_BOX_HEIGHT,
-          ),
+          new MeasurementHistogramNode(model.probabilitiesProperty, SIM_PANEL_CONTENT_WIDTH, MEASUREMENT_BOX_HEIGHT),
         ),
       ],
     });

@@ -66,7 +66,10 @@ Column semantics (v1):
 if control bits match, rotate amplitudes by the 2×2 gate matrix; otherwise leave them unchanged.
 
 **Measurement display.** Probabilities pₖ = |αₖ|² are exact from the statevector. The histogram **samples**
-a basis outcome from that distribution; it is pedagogical, not a mid-circuit projection of |ψ⟩.
+a basis outcome from the **displayed** distribution (the inspect-mode prefix state when inspect is active);
+it is pedagogical, not a mid-circuit projection of |ψ⟩. The tally clears automatically whenever that
+distribution changes (circuit edit, qubit-count change, or inspect scrub), so it never mixes shots from
+different circuits.
 
 **Inspect mode.** `inspectStep = k` shows the state after the first *k* columns without editing the
 circuit or undo history.
@@ -76,8 +79,9 @@ circuit or undo history.
 - **Ideal, noiseless** unitary gates; no decoherence, gate error, or readout error.
 - **Pure-state CPU statevector** — exact but exponential in n; capped at **5 qubits** (32 amplitudes).
 - **Global phase** is unobservable and not emphasized in the UI.
-- **One controlled target per column** when controls are present; multiple gates in a control column
-  beyond the first target are ignored.
+- **One controlled target per column** when controls are present. The editor refuses placements that
+  would create a cell the simulator ignores, so every column is one of three shapes: independent
+  single-qubit gates, a single controlled operation, or a single SWAP pair.
 - OpenQASM import/export covers a **teaching subset** (see QASM dialog); not full OpenQASM 3.
 
 ## References

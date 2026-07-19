@@ -6,9 +6,13 @@
  * the tally. With enough shots the histogram approaches the probability bars —
  * the link between amplitudes and what you'd actually observe.
  *
- * Pedagogical simplification: this samples the FINAL statevector for display
- * only. It does NOT collapse the state or affect any gates (no mid-circuit
- * measurement). See README limitations.
+ * Pedagogical simplification: this samples the DISPLAYED statevector (the
+ * inspect-mode prefix state when inspect is active, the final state otherwise)
+ * for display only. It does NOT collapse the state or affect any gates (no
+ * mid-circuit measurement). See README limitations. Whenever that distribution
+ * changes — a circuit edit, a qubit-count change, or an inspect scrub — the
+ * tally is cleared, so the histogram never mixes shots from different
+ * distributions.
  */
 import { Property, type ReadOnlyProperty } from "scenerystack/axon";
 import { Node, Rectangle, Text } from "scenerystack/scenery";
@@ -35,20 +39,16 @@ function sampleOutcome(probabilities: number[]): number {
 }
 
 export class MeasurementHistogramNode extends Node {
-  public constructor(
-    probabilitiesProperty: ReadOnlyProperty<number[]>,
-    qubitCountProperty: ReadOnlyProperty<number>,
-    width: number,
-    boxHeight: number,
-  ) {
+  public constructor(probabilitiesProperty: ReadOnlyProperty<number[]>, width: number, boxHeight: number) {
     super();
 
     const labels = StringManager.getInstance().getButtonLabels();
     const shotsProperty = new Property<number[]>(new Array(probabilitiesProperty.value.length).fill(0));
 
-    // Resizing the register invalidates the old basis, so clear the tally.
-    qubitCountProperty.link((n) => {
-      shotsProperty.value = new Array(1 << n).fill(0);
+    // Any change to the sampled distribution (circuit edit, qubit-count change, inspect scrub)
+    // invalidates the old tally, so clear it rather than mixing shots from different circuits.
+    probabilitiesProperty.lazyLink((probabilities) => {
+      shotsProperty.value = new Array(probabilities.length).fill(0);
     });
 
     const measureButton = new RectangularPushButton({
