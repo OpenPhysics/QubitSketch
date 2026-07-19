@@ -359,19 +359,19 @@ export function qasmToCircuit(qasm: string): { circuit: CircuitCell[][]; qubitCo
     if (m === null) {
       return null;
     }
-    const name = m[1]!.toLowerCase();
+    const name = (m[1] ?? "").toLowerCase();
     const param = m[2];
-    const rest = m[3]!.trim();
+    const rest = (m[3] ?? "").trim();
 
     if (name === "qreg") {
       if (declaredQubits !== null) {
         return null; // multiple quantum registers are unsupported
       }
       const reg = rest.match(/^[A-Za-z_]\w*\s*\[\s*(\d+)\s*\]$/);
-      if (reg === null) {
+      if (reg === null || reg[1] === undefined) {
         return null;
       }
-      declaredQubits = Number.parseInt(reg[1]!, 10);
+      declaredQubits = Number.parseInt(reg[1], 10);
       continue;
     }
     if (IGNORED_STATEMENTS.has(name)) {

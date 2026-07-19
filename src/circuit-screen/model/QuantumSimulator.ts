@@ -64,10 +64,17 @@ export function applyControlledGate(
       continue;
     }
     const j = i | targetBit; // partner with "1 at target"
-    const a0 = state[i]!;
-    const a1 = state[j]!;
-    state[i] = m[0][0]!.times(a0).plus(m[0][1]!.times(a1));
-    state[j] = m[1][0]!.times(a0).plus(m[1][1]!.times(a1));
+    const a0 = state[i];
+    const a1 = state[j];
+    const m00 = m[0]?.[0];
+    const m01 = m[0]?.[1];
+    const m10 = m[1]?.[0];
+    const m11 = m[1]?.[1];
+    if (a0 === undefined || a1 === undefined || !m00 || !m01 || !m10 || !m11) {
+      continue;
+    }
+    state[i] = m00.times(a0).plus(m01.times(a1));
+    state[j] = m10.times(a0).plus(m11.times(a1));
   }
 }
 

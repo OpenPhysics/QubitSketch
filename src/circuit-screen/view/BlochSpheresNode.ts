@@ -15,7 +15,7 @@
  */
 import { Multilink, NumberProperty, type ReadOnlyProperty } from "scenerystack/axon";
 import type { Vector3 } from "scenerystack/dot";
-import { Circle, DragListener, Node, Rectangle, Text } from "scenerystack/scenery";
+import { Circle, DragListener, KeyboardDragListener, Node, Rectangle, Text } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import { BlochSphereNode } from "./BlochSphereNode.js";
@@ -76,16 +76,27 @@ export class BlochSpheresNode extends Node {
       focusable: true,
       accessibleName: StringManager.getInstance().getA11yStrings().controls.blochSphereStringProperty,
     });
+    const rotateCamera = (delta: { x: number; y: number }): void => {
+      this.azimuthProperty.value += delta.x * ROTATE_SPEED;
+      this.elevationProperty.value = clamp(
+        this.elevationProperty.value - delta.y * ROTATE_SPEED,
+        MIN_ELEVATION,
+        MAX_ELEVATION,
+      );
+    };
     dragArea.addInputListener(
       new DragListener({
         drag: (_event, listener) => {
-          const delta = listener.modelDelta;
-          this.azimuthProperty.value += delta.x * ROTATE_SPEED;
-          this.elevationProperty.value = clamp(
-            this.elevationProperty.value - delta.y * ROTATE_SPEED,
-            MIN_ELEVATION,
-            MAX_ELEVATION,
-          );
+          rotateCamera(listener.modelDelta);
+        },
+      }),
+    );
+    dragArea.addInputListener(
+      new KeyboardDragListener({
+        dragSpeed: 200,
+        shiftDragSpeed: 80,
+        drag: (_event, listener) => {
+          rotateCamera(listener.modelDelta);
         },
       }),
     );
