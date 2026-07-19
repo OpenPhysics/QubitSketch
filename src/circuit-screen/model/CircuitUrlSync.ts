@@ -66,4 +66,20 @@ export function attachUrlSync(model: QubitSketchModel): void {
   // publishing the just-loaded circuit to the hash.
   model.circuitProperty.link(save);
   model.qubitCountProperty.lazyLink(save);
+
+  // A hash edit from outside the app (pasting a shared #circuit= link into this tab, or
+  // back/forward across hashes) should load that circuit. Our own writes use replaceState,
+  // which never fires hashchange. Loading via loadCircuit keeps the previous circuit
+  // recoverable with undo.
+  window.addEventListener("hashchange", () => {
+    const raw = window.location.hash.replace(/^#/, "");
+    const encoded = new URLSearchParams(raw).get(HASH_KEY);
+    if (encoded === null || encoded === serialize(model.circuitProperty.value, model.qubitCountProperty.value)) {
+      return;
+    }
+    const parsed = deserialize(encoded);
+    if (parsed !== null) {
+      model.loadCircuit(parsed.circuit, parsed.qubitCount);
+    }
+  });
 }

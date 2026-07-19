@@ -63,7 +63,11 @@ Fleet-standard Vitest layout:
 
 Actual specs:
 
+- `tests/quantum-simulator.test.ts` — physics engine (gates, controls, SWAP, Bloch vectors, inspect prefix)
+- `tests/serializers.test.ts` — URL + QASM round-trips, import column packing, malformed-input tolerance
+- `tests/qubit-sketch-model.test.ts` — placement guards (column shapes), undo/redo history
 - `tests/memory-leak.test.ts` (covers `GatePalettePanel.dispose()` — palette drag previews and tooltips link global color Properties)
+- Shared grid/cell builders live in `tests/helpers.ts`
 
 Run `npm test`. CI runs the suite when a `test` script is present.
 

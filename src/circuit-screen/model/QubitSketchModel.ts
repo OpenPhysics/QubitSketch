@@ -20,7 +20,16 @@ import type { TModel } from "scenerystack/joist";
 import type { QubitSketchPreferencesModel } from "../../preferences/QubitSketchPreferencesModel.js";
 import qubitSketchQueryParameters from "../../preferences/qubitSketchQueryParameters.js";
 import type { CircuitCell, GateType, SelectedTool } from "./GateType.js";
-import { EMPTY_CELL, isAnyControl, MAX_QUBITS, MIN_QUBITS, NUM_STEPS, ROTATION_TOOL_AXIS } from "./GateType.js";
+import {
+  cellsEqual,
+  EMPTY_CELL,
+  isAnyControl,
+  isGateBearing,
+  MAX_QUBITS,
+  MIN_QUBITS,
+  NUM_STEPS,
+  ROTATION_TOOL_AXIS,
+} from "./GateType.js";
 import { computeBlochVectors, simulate } from "./QuantumSimulator.js";
 
 /** A position in the circuit grid. */
@@ -137,10 +146,14 @@ export class QubitSketchModel implements TModel {
     return Math.max(MIN_QUBITS, Math.min(MAX_QUBITS, Math.round(count)));
   }
 
-  /** True if any cell in the given step (column) is a control of either polarity (• or ◦). */
+  /**
+   * True if any VISIBLE cell in the given step (column) is a control of either polarity (• or ◦).
+   * Hidden rows (q ≥ qubitCount) are excluded to match the simulator, which ignores them.
+   */
   private columnHasControl(stepIndex: number, exceptQubit: number): boolean {
     const circuit = this.circuitProperty.value;
-    for (let q = 0; q < MAX_QUBITS; q++) {
+    const n = this.qubitCountProperty.value;
+    for (let q = 0; q < n; q++) {
       if (q !== exceptQubit && isAnyControl(circuit[q]?.[stepIndex] ?? EMPTY_CELL)) {
         return true;
       }
@@ -148,11 +161,12 @@ export class QubitSketchModel implements TModel {
     return false;
   }
 
-  /** Number of SWAP endpoints already in the given column (excluding `exceptQubit`). */
+  /** Number of SWAP endpoints already in the given column's visible rows (excluding `exceptQubit`). */
   private columnSwapCount(stepIndex: number, exceptQubit: number): number {
     const circuit = this.circuitProperty.value;
+    const n = this.qubitCountProperty.value;
     let count = 0;
-    for (let q = 0; q < MAX_QUBITS; q++) {
+    for (let q = 0; q < n; q++) {
       if (q !== exceptQubit && (circuit[q]?.[stepIndex] ?? EMPTY_CELL).kind === "swap") {
         count++;
       }
@@ -160,51 +174,109 @@ export class QubitSketchModel implements TModel {
     return count;
   }
 
-  /**
-   * Applies the currently selected tool to the given grid position. Each tool toggles:
-   * clicking the same tool on a cell it already occupies clears that cell.
-   *   - gate tool:    places the gate (as a controlled target if its column has a control).
-   *   - control / antiControl: toggles a filled (•) or open (◦) control dot.
-   *   - swap:         places a SWAP endpoint (a column holds at most two).
-   *   - Rx / Ry / Rz: places a parametrized rotation gate (default angle π/2) and selects it.
-   *   - eraser:       clears the cell.
-   */
-  public placeCell(qubitIndex: number, stepIndex: number): void {
-    // Editing the circuit leaves step-through inspect mode so the displays stay authoritative.
-    this.inspectStepProperty.value = null;
-    const tool = this.selectedToolProperty.value;
-    const current = this.circuitProperty.value[qubitIndex]?.[stepIndex] ?? EMPTY_CELL;
-
-    let next: CircuitCell;
-    if (tool === "eraser") {
-      next = EMPTY_CELL;
-    } else if (tool === "control") {
-      next = current.kind === "control" ? EMPTY_CELL : { kind: "control" };
-    } else if (tool === "antiControl") {
-      next = current.kind === "antiControl" ? EMPTY_CELL : { kind: "antiControl" };
-    } else if (tool === "swap") {
-      if (current.kind === "swap") {
-        next = EMPTY_CELL;
-      } else if (this.columnSwapCount(stepIndex, qubitIndex) >= 2) {
-        return; // a column may hold at most two SWAP endpoints
-      } else {
-        next = { kind: "swap" };
-      }
-    } else if (tool === "Rx" || tool === "Ry" || tool === "Rz") {
-      const axis = ROTATION_TOOL_AXIS[tool];
-      const sameAxis = current.kind === "paramGate" && current.axis === axis;
-      next = sameAxis ? EMPTY_CELL : { kind: "paramGate", axis, theta: Math.PI / 2 };
-    } else {
-      const gate: GateType = tool;
-      const sameGate = (current.kind === "gate" || current.kind === "controlledTarget") && current.gate === gate;
-      if (sameGate) {
-        next = EMPTY_CELL;
-      } else if (this.columnHasControl(stepIndex, qubitIndex)) {
-        next = { kind: "controlledTarget", gate };
-      } else {
-        next = { kind: "gate", gate };
+  /** Number of gate-bearing cells (fixed gate, controlled target, or rotation) in the column's visible rows. */
+  private columnGateCount(stepIndex: number, exceptQubit: number): number {
+    const circuit = this.circuitProperty.value;
+    const n = this.qubitCountProperty.value;
+    let count = 0;
+    for (let q = 0; q < n; q++) {
+      if (q !== exceptQubit && isGateBearing(circuit[q]?.[stepIndex] ?? EMPTY_CELL)) {
+        count++;
       }
     }
+    return count;
+  }
+
+  /**
+   * True if a gate-bearing cell may be placed at the position — refused when the column already
+   * holds a SWAP endpoint or is a controlled column with its (single) target taken. Both would
+   * otherwise place a gate the simulator silently ignores under the v1 column rules.
+   */
+  private canPlaceGate(qubitIndex: number, stepIndex: number): boolean {
+    if (this.columnSwapCount(stepIndex, qubitIndex) > 0) {
+      return false;
+    }
+    return !(this.columnHasControl(stepIndex, qubitIndex) && this.columnGateCount(stepIndex, qubitIndex) > 0);
+  }
+
+  /**
+   * Computes the cell a control/swap marker tool would leave, or null if the placement is refused.
+   * Clicking the marker's own cell clears it (toggle).
+   */
+  private nextMarkerCell(
+    tool: "control" | "antiControl" | "swap",
+    current: CircuitCell,
+    qubitIndex: number,
+    stepIndex: number,
+  ): CircuitCell | null {
+    if (current.kind === tool) {
+      return EMPTY_CELL;
+    }
+    if (tool === "swap") {
+      // A column holds at most one SWAP pair, and the pair must have the column to itself.
+      const allowed =
+        this.columnSwapCount(stepIndex, qubitIndex) < 2 &&
+        !this.columnHasControl(stepIndex, qubitIndex) &&
+        this.columnGateCount(stepIndex, qubitIndex) === 0;
+      return allowed ? { kind: "swap" } : null;
+    }
+    // Refused when it would demote all but one gate to dead cells, or condition an unsupported controlled-SWAP.
+    const allowed =
+      this.columnGateCount(stepIndex, qubitIndex) < 2 && this.columnSwapCount(stepIndex, qubitIndex) === 0;
+    return allowed ? (tool === "control" ? { kind: "control" } : { kind: "antiControl" }) : null;
+  }
+
+  /**
+   * Computes the cell the active tool would leave at the position, or null if the placement is
+   * refused. Each tool toggles: clicking the same tool on a cell it already occupies clears it.
+   * Placements the simulator would silently ignore are refused, keeping every column one of the
+   * three supported shapes: plain gates only, one controlled operation, or one SWAP pair.
+   * Clearing (toggle-off / eraser) is always allowed.
+   */
+  private nextCellForTool(
+    tool: SelectedTool,
+    current: CircuitCell,
+    qubitIndex: number,
+    stepIndex: number,
+  ): CircuitCell | null {
+    if (tool === "eraser") {
+      return EMPTY_CELL;
+    }
+    if (tool === "control" || tool === "antiControl" || tool === "swap") {
+      return this.nextMarkerCell(tool, current, qubitIndex, stepIndex);
+    }
+    if (tool === "Rx" || tool === "Ry" || tool === "Rz") {
+      const axis = ROTATION_TOOL_AXIS[tool];
+      if (current.kind === "paramGate" && current.axis === axis) {
+        return EMPTY_CELL;
+      }
+      return this.canPlaceGate(qubitIndex, stepIndex) ? { kind: "paramGate", axis, theta: Math.PI / 2 } : null;
+    }
+    const gate: GateType = tool;
+    if ((current.kind === "gate" || current.kind === "controlledTarget") && current.gate === gate) {
+      return EMPTY_CELL;
+    }
+    if (!this.canPlaceGate(qubitIndex, stepIndex)) {
+      return null;
+    }
+    return this.columnHasControl(stepIndex, qubitIndex) ? { kind: "controlledTarget", gate } : { kind: "gate", gate };
+  }
+
+  /**
+   * Applies the currently selected tool to the given grid position (see {@link nextCellForTool}
+   * for the per-tool placement and refusal rules).
+   */
+  public placeCell(qubitIndex: number, stepIndex: number): void {
+    const current = this.circuitProperty.value[qubitIndex]?.[stepIndex] ?? EMPTY_CELL;
+    const next = this.nextCellForTool(this.selectedToolProperty.value, current, qubitIndex, stepIndex);
+
+    // A refused placement or a click that changes nothing (e.g. the eraser on an empty cell)
+    // records no history and leaves inspect mode alone.
+    if (next === null || cellsEqual(current, next)) {
+      return;
+    }
+    // Editing the circuit leaves step-through inspect mode so the displays stay authoritative.
+    this.inspectStepProperty.value = null;
     this.pushHistory();
     this.setCell(qubitIndex, stepIndex, next);
     // Auto-select a freshly placed rotation gate so its angle inspector opens; otherwise deselect.
@@ -214,7 +286,7 @@ export class QubitSketchModel implements TModel {
   /** Updates the rotation angle (radians) of a parametrized gate at the given position. */
   public setCellTheta(qubitIndex: number, stepIndex: number, theta: number): void {
     const current = this.circuitProperty.value[qubitIndex]?.[stepIndex];
-    if (current?.kind !== "paramGate") {
+    if (current?.kind !== "paramGate" || current.theta === theta) {
       return;
     }
     // Coalesce a continuous slider drag on one cell into a single undo step.
