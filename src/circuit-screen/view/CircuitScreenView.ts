@@ -29,6 +29,7 @@ import { GatePalettePanel } from "./GatePalettePanel.js";
 import { InspectControlNode } from "./InspectControlNode.js";
 import { createQasmDialogOpener } from "./QasmDialog.js";
 import { SimulationPanel } from "./SimulationPanel.js";
+import { attachUndoRedoKeyboardShortcuts } from "./undoRedoKeyboardShortcuts.js";
 
 export class CircuitScreenView extends ScreenView {
   public constructor(model: QubitSketchModel, options?: ScreenViewOptions) {
@@ -127,21 +128,10 @@ export class CircuitScreenView extends ScreenView {
     inspectControl.centerY = qubitControlNode.centerY;
     this.addChild(inspectControl);
 
-    // Keyboard: Ctrl/Cmd+Z = undo, Ctrl+Y or Ctrl/Cmd+Shift+Z = redo.
-    window.addEventListener("keydown", (e) => {
-      const meta = e.ctrlKey || e.metaKey;
-      if (!meta || e.altKey) {
-        return;
-      }
-      const key = e.key.toLowerCase();
-      if (key === "z" && !e.shiftKey) {
-        model.undo();
-        e.preventDefault();
-      } else if (key === "y" || (key === "z" && e.shiftKey)) {
-        model.redo();
-        e.preventDefault();
-      }
-    });
+    // Keyboard: Ctrl/Cmd+Z = undo, Ctrl+Y or Ctrl/Cmd+Shift+Z = redo. The shortcut
+    // lives on the global `window`, so it must be removed when this view is disposed
+    // or `window` would retain the listener (and, through it, the model) forever.
+    this.disposeEmitter.addListener(attachUndoRedoKeyboardShortcuts(model));
 
     // ── Rotation-gate angle inspector (below the circuit) ─────────────────────
     const inspector = new GateInspectorNode(model);

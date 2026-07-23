@@ -21,6 +21,10 @@ export class CircuitScreen extends Screen<QubitSketchModel, CircuitScreenView> {
     super(
       () => {
         const model = new QubitSketchModel(options.preferences);
+        // attachUrlSync returns a disposer. This is a single-screen sim: joist never
+        // tears the model down, so the URL sync lives for the page and there is
+        // nothing to dispose here. The disposer exists so the sync is cleanly
+        // removable under repeated construction (tests, hot-reload).
         attachUrlSync(model);
         return model;
       },
