@@ -14,10 +14,12 @@ import { toFixed } from "scenerystack/dot";
 import { Node, Text } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
-import { formatComplex, formatPhase, ketLabel } from "./displayUtils.js";
+import { basisRowFont, formatComplex, formatPhase, ketLabel, NEGLIGIBLE_AMPLITUDE } from "./displayUtils.js";
 
 const MAX_ROW_HEIGHT = 15;
 const COL_STATE = 4;
+/** Height reserved for the header row above the amplitude body. */
+const HEADER_HEIGHT = 16;
 
 export class AmplitudeTableNode extends Node {
   public constructor(stateVectorProperty: ReadOnlyProperty<Complex[]>, width: number, boxHeight: number) {
@@ -66,19 +68,18 @@ export class AmplitudeTableNode extends Node {
     );
     this.addChild(headerRow);
 
-    const body = new Node({ y: 16 });
+    const body = new Node({ y: HEADER_HEIGHT });
     this.addChild(body);
 
     stateVectorProperty.link((state) => {
       body.removeAllChildren();
       const n = Math.round(Math.log2(state.length));
-      const rowHeight = Math.min(MAX_ROW_HEIGHT, Math.max(1, (boxHeight - 16) / state.length));
-      const fontSize = Math.max(7, Math.min(11, rowHeight - 3));
-      const font = `${fontSize}px monospace`;
+      const rowHeight = Math.min(MAX_ROW_HEIGHT, Math.max(1, (boxHeight - HEADER_HEIGHT) / state.length));
+      const font = basisRowFont(rowHeight);
 
       for (const [i, amp] of state.entries()) {
         const y = i * rowHeight;
-        const negligible = amp.magnitudeSquared < 1e-9;
+        const negligible = amp.magnitudeSquared < NEGLIGIBLE_AMPLITUDE;
         const fill = negligible ? QubitSketchColors.slotBorderColorProperty : QubitSketchColors.textColorProperty;
 
         body.addChild(new Text(ketLabel(i, n), { font, fill, left: COL_STATE, centerY: y }));

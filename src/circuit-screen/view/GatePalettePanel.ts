@@ -17,7 +17,7 @@ import type { SelectedTool } from "../model/GateType.js";
 import { GateType, ROTATION_TOOL_AXIS } from "../model/GateType.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import type { SlotDropTarget } from "./CircuitCanvas.js";
-import { GateNode, RotationGateNode } from "./GateNode.js";
+import { GATE_CORNER_RADIUS, GateNode, RotationGateNode } from "./GateNode.js";
 import { MatrixTooltipNode } from "./MatrixTooltipNode.js";
 
 /** Where dragged gates float and land. Supplied by CircuitScreenView. */
@@ -257,7 +257,12 @@ function disposeSubtree(node: Node): void {
 function makeToolNode(tool: SelectedTool, size: number): Node {
   const node = new Node();
   if (tool === "eraser") {
-    node.addChild(new Rectangle(0, 0, size, size, { fill: QubitSketchColors.eraserColorProperty, cornerRadius: 6 }));
+    node.addChild(
+      new Rectangle(0, 0, size, size, {
+        fill: QubitSketchColors.eraserColorProperty,
+        cornerRadius: GATE_CORNER_RADIUS,
+      }),
+    );
     node.addChild(
       new Text("✕", {
         font: `bold ${Math.floor(size * 0.44)}px sans-serif`,
@@ -272,7 +277,7 @@ function makeToolNode(tool: SelectedTool, size: number): Node {
         fill: QubitSketchColors.slotBackgroundColorProperty,
         stroke: QubitSketchColors.slotBorderColorProperty,
         lineWidth: 1,
-        cornerRadius: 6,
+        cornerRadius: GATE_CORNER_RADIUS,
       }),
     );
     node.addChild(
@@ -284,7 +289,7 @@ function makeToolNode(tool: SelectedTool, size: number): Node {
         fill: QubitSketchColors.slotBackgroundColorProperty,
         stroke: QubitSketchColors.slotBorderColorProperty,
         lineWidth: 1,
-        cornerRadius: 6,
+        cornerRadius: GATE_CORNER_RADIUS,
       }),
     );
     node.addChild(
@@ -302,7 +307,7 @@ function makeToolNode(tool: SelectedTool, size: number): Node {
         fill: QubitSketchColors.slotBackgroundColorProperty,
         stroke: QubitSketchColors.slotBorderColorProperty,
         lineWidth: 1,
-        cornerRadius: 6,
+        cornerRadius: GATE_CORNER_RADIUS,
       }),
     );
     const cx = size / 2;

@@ -15,7 +15,7 @@ import type { Complex } from "scenerystack/dot";
 import { toFixed } from "scenerystack/dot";
 import { Node, Rectangle, Text } from "scenerystack/scenery";
 import QubitSketchColors from "../../QubitSketchColors.js";
-import { ketLabel, phaseToColor } from "./displayUtils.js";
+import { basisRowFont, ketLabel, phaseToColor } from "./displayUtils.js";
 import { PhaseLegendNode } from "./PhaseLegendNode.js";
 
 const MAX_ROW_HEIGHT = 16;
@@ -45,8 +45,7 @@ export class ProbabilityBarsNode extends Node {
       barsLayer.removeAllChildren();
       const n = Math.round(Math.log2(state.length));
       const rowHeight = Math.min(MAX_ROW_HEIGHT, barsHeight / state.length);
-      const fontSize = Math.max(7, Math.min(11, rowHeight - 3));
-      const font = `${fontSize}px monospace`;
+      const font = basisRowFont(rowHeight);
 
       for (const [i, amp] of state.entries()) {
         const p = amp.magnitudeSquared;
