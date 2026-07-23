@@ -37,9 +37,16 @@ const GATE_LABEL_MAP = {
   Vx: "√X",
 } as const satisfies Record<GateType, string>;
 
+/** Corner radius of a gate's colored box (shared by fixed and rotation gates). */
+export const GATE_CORNER_RADIUS = 6;
+
+// Glyph size as a fraction of the box, so labels scale with the gate box.
+const SINGLE_CHAR_LABEL_SCALE = 0.44; // "H", "X", … fill more of the box
+const MULTI_CHAR_LABEL_SCALE = 0.3; // "S†", "√X", … must fit a wider glyph
+
 /** Bold monospace font sized to fit a 1- or multi-character glyph inside the gate box. */
 function labelFont(label: string, size: number): string {
-  const scale = label.length <= 1 ? 0.44 : 0.3;
+  const scale = label.length <= 1 ? SINGLE_CHAR_LABEL_SCALE : MULTI_CHAR_LABEL_SCALE;
   return `bold ${Math.floor(size * scale)}px monospace`;
 }
 
@@ -54,7 +61,7 @@ export class GateNode extends Node {
 
     this.background = new Rectangle(0, 0, size, size, {
       fill: GATE_COLOR_MAP[gateType],
-      cornerRadius: 6,
+      cornerRadius: GATE_CORNER_RADIUS,
     });
 
     const text = GATE_LABEL_MAP[gateType];
@@ -90,6 +97,14 @@ export function rotationLabel(axis: RotationAxis): string {
   return `R${axis.toLowerCase()}`;
 }
 
+// Rotation-gate glyph metrics, as fractions of the box size. The axis label ("Rx") sits
+// higher to make room for the angle readout ("90°") below it when an angle is shown.
+const ROTATION_LABEL_SCALE = 0.34; // font size of the "Rx" axis label
+const ROTATION_LABEL_CENTER_Y_WITH_ANGLE = 0.36; // axis label vertical center when the angle shows
+const ROTATION_ANGLE_SCALE = 0.24; // font size of the "90°" angle readout
+const ROTATION_ANGLE_CENTER_Y = 0.7; // angle readout vertical center
+const HALF_TURN_DEGREES = 180;
+
 /**
  * Visual for a parametrized rotation gate: a colored box with the axis label ("Rx"/"Ry"/"Rz")
  * and, optionally, the current angle in degrees below it.
@@ -101,28 +116,28 @@ export class RotationGateNode extends Node {
     this.addChild(
       new Rectangle(0, 0, size, size, {
         fill: ROTATION_COLOR_MAP[axis],
-        cornerRadius: 6,
+        cornerRadius: GATE_CORNER_RADIUS,
       }),
     );
 
     const showAngle = theta !== undefined;
     this.addChild(
       new Text(rotationLabel(axis), {
-        font: `bold ${Math.floor(size * 0.34)}px monospace`,
+        font: `bold ${Math.floor(size * ROTATION_LABEL_SCALE)}px monospace`,
         fill: QubitSketchColors.onGateTextColorProperty,
         centerX: size / 2,
-        centerY: showAngle ? size * 0.36 : size / 2,
+        centerY: showAngle ? size * ROTATION_LABEL_CENTER_Y_WITH_ANGLE : size / 2,
       }),
     );
 
     if (showAngle) {
-      const deg = Math.round((theta * 180) / Math.PI);
+      const deg = Math.round((theta * HALF_TURN_DEGREES) / Math.PI);
       this.addChild(
         new Text(`${deg}°`, {
-          font: `${Math.floor(size * 0.24)}px sans-serif`,
+          font: `${Math.floor(size * ROTATION_ANGLE_SCALE)}px sans-serif`,
           fill: QubitSketchColors.onGateTextColorProperty,
           centerX: size / 2,
-          centerY: size * 0.7,
+          centerY: size * ROTATION_ANGLE_CENTER_Y,
         }),
       );
     }

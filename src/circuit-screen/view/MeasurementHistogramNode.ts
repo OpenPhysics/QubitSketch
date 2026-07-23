@@ -19,7 +19,7 @@ import { Node, Rectangle, Text } from "scenerystack/scenery";
 import { FlatAppearanceStrategy, RectangularPushButton } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
-import { ketLabel } from "./displayUtils.js";
+import { basisRowFont, ketLabel } from "./displayUtils.js";
 
 const MAX_ROW_HEIGHT = 16;
 const LABEL_WIDTH = 52;
@@ -102,8 +102,7 @@ export class MeasurementHistogramNode extends Node {
       totalText.string = `${total} shot${total === 1 ? "" : "s"}`;
       const n = Math.round(Math.log2(shots.length));
       const rowHeight = Math.min(MAX_ROW_HEIGHT, boxHeight / shots.length);
-      const fontSize = Math.max(7, Math.min(11, rowHeight - 3));
-      const font = `${fontSize}px monospace`;
+      const font = basisRowFont(rowHeight);
 
       for (let i = 0; i < shots.length; i++) {
         const count = shots[i] ?? 0;
