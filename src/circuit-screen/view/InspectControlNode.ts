@@ -17,6 +17,7 @@ import { HBox, Text } from "scenerystack/scenery";
 import { FlatAppearanceStrategy, RectangularPushButton } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 
 export class InspectControlNode extends HBox {
@@ -39,11 +40,11 @@ export class InspectControlNode extends HBox {
 
     const prevButton = new RectangularPushButton({
       ...buttonAppearance,
-      content: new Text("◀", { font: "bold 16px sans-serif", fill: QubitSketchColors.textColorProperty }),
+      content: new Text("◀", { font: FONTS.transportGlyph, fill: QubitSketchColors.textColorProperty }),
       listener: () => {
         const k = shownColumn();
         if (k > 0) {
-          stepProperty.value = k - 1;
+          model.setInspectStep(k - 1);
         }
       },
       enabledProperty: new DerivedProperty(
@@ -55,11 +56,11 @@ export class InspectControlNode extends HBox {
 
     const nextButton = new RectangularPushButton({
       ...buttonAppearance,
-      content: new Text("▶", { font: "bold 16px sans-serif", fill: QubitSketchColors.textColorProperty }),
+      content: new Text("▶", { font: FONTS.transportGlyph, fill: QubitSketchColors.textColorProperty }),
       listener: () => {
         const next = shownColumn() + 1;
         // Stepping past the last column returns to the live (final) state.
-        stepProperty.value = next >= depthProperty.value ? null : next;
+        model.setInspectStep(next >= depthProperty.value ? null : next);
       },
       // Forward only makes sense while inspecting (live already sits at the end).
       enabledProperty: new DerivedProperty([stepProperty], (step) => step !== null),
@@ -67,7 +68,7 @@ export class InspectControlNode extends HBox {
     });
 
     const readout = new Text("", {
-      font: "13px monospace",
+      font: FONTS.transportReadout,
       fill: QubitSketchColors.textColorProperty,
     });
     new DerivedProperty([stepProperty, depthProperty, strings.liveStringProperty], (step, depth, live) =>
@@ -79,11 +80,11 @@ export class InspectControlNode extends HBox {
     const liveButton = new RectangularPushButton({
       ...buttonAppearance,
       content: new Text(strings.liveStringProperty, {
-        font: "12px sans-serif",
+        font: FONTS.caption,
         fill: QubitSketchColors.textColorProperty,
       }),
       listener: () => {
-        stepProperty.value = null;
+        model.setInspectStep(null);
       },
       enabledProperty: new DerivedProperty([stepProperty], (step) => step !== null),
     });

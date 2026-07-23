@@ -15,6 +15,7 @@ import { Dialog } from "scenerystack/sim";
 import { ButtonNode, TextPushButton } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import { circuitToQasm, qasmToCircuit } from "../model/QasmSerializer.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 
@@ -32,7 +33,7 @@ function makeTextarea(readOnly: boolean): HTMLTextAreaElement {
 }
 
 function label(textProperty: ReadOnlyProperty<string>): Text {
-  return new Text(textProperty, { font: "bold 12px sans-serif", fill: QubitSketchColors.textColorProperty });
+  return new Text(textProperty, { font: FONTS.captionBold, fill: QubitSketchColors.textColorProperty });
 }
 
 /** Returns a function that opens (building once, then reusing) the OpenQASM dialog for `model`. */
@@ -46,7 +47,7 @@ export function createQasmDialogOpener(model: QubitSketchModel): () => void {
   function build(): void {
     exportEl = makeTextarea(true);
     importEl = makeTextarea(false);
-    status = new Text("", { font: "11px sans-serif", fill: QubitSketchColors.textColorProperty });
+    status = new Text("", { font: FONTS.captionSmall, fill: QubitSketchColors.textColorProperty });
 
     const copyButton = new TextPushButton(strings.copyStringProperty, {
       buttonAppearanceStrategy: ButtonNode.FlatAppearanceStrategy,
@@ -102,7 +103,7 @@ export function createQasmDialogOpener(model: QubitSketchModel): () => void {
       stroke: QubitSketchColors.panelBorderColorProperty,
       closeButtonColor: QubitSketchColors.textColorProperty,
       title: new Text(strings.titleStringProperty, {
-        font: "bold 16px sans-serif",
+        font: FONTS.dialogTitle,
         fill: QubitSketchColors.textColorProperty,
       }),
     });

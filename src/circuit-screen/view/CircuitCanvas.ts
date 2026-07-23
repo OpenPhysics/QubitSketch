@@ -19,8 +19,11 @@
 import type { Vector2 } from "scenerystack/dot";
 import { Circle, Line, Node, Rectangle, Text } from "scenerystack/scenery";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
+import type { Grid } from "../model/CircuitGrid.js";
+import { cellAt, classifyColumn, columnHasControl } from "../model/CircuitGrid.js";
 import type { CircuitCell } from "../model/GateType.js";
-import { cellGate, isAnyControl, MAX_QUBITS, NUM_STEPS } from "../model/GateType.js";
+import { cellGate, cellsEqual, MAX_QUBITS, NUM_STEPS } from "../model/GateType.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import { GateNode, RotationGateNode } from "./GateNode.js";
 
@@ -96,7 +99,7 @@ export class CircuitCanvas extends Node {
 
       // Qubit label
       const label = new Text(`q${q}`, {
-        font: "bold 16px monospace",
+        font: FONTS.qubitLabel,
         fill: QubitSketchColors.textColorProperty,
         right: LABEL_WIDTH - 6,
         centerY: wireCenterY,
@@ -141,8 +144,8 @@ export class CircuitCanvas extends Node {
           },
           down: () => {
             // Clicking an existing rotation gate (with any non-eraser tool) opens its angle inspector.
-            const cell = model.circuitProperty.value[q]?.[stepIndex];
-            if (cell?.kind === "paramGate" && model.selectedToolProperty.value !== "eraser") {
+            const cell = cellAt(model.circuitProperty.value, q, stepIndex);
+            if (cell.kind === "paramGate" && model.selectedToolProperty.value !== "eraser") {
               model.selectedCellProperty.value = { qubit: q, step: stepIndex };
             } else {
               model.placeCell(q, stepIndex);
@@ -260,17 +263,7 @@ export class CircuitCanvas extends Node {
     return null;
   }
 
-  private cellsEqual(a: CircuitCell, b: CircuitCell): boolean {
-    if (a.kind !== b.kind) {
-      return false;
-    }
-    if (a.kind === "paramGate" && b.kind === "paramGate") {
-      return a.axis === b.axis && a.theta === b.theta;
-    }
-    return cellGate(a) === cellGate(b);
-  }
-
-  private updateCellNodes(circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>): void {
+  private updateCellNodes(circuit: Grid): void {
     for (let q = 0; q < MAX_QUBITS; q++) {
       const row = this.qubitRows[q];
       const nodeRow = this.cellNodes[q];
@@ -279,9 +272,9 @@ export class CircuitCanvas extends Node {
         continue;
       }
       for (let s = 0; s < NUM_STEPS; s++) {
-        const cell = circuit[q]?.[s] ?? { kind: "empty" };
+        const cell = cellAt(circuit, q, s);
         const prev = cellRow[s] ?? { kind: "empty" };
-        if (this.cellsEqual(cell, prev)) {
+        if (cellsEqual(cell, prev)) {
           continue;
         }
         // Remove the old node, if any.
@@ -305,7 +298,7 @@ export class CircuitCanvas extends Node {
    * occupied wire whenever that column contains a control (• or ◦) or a pair of SWAP
    * endpoints, so the user sees which wires the operation links.
    */
-  private updateConnectors(circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>, qubitCount: number): void {
+  private updateConnectors(circuit: Grid, qubitCount: number): void {
     for (let s = 0; s < NUM_STEPS; s++) {
       const existing = this.connectors[s];
       if (existing !== null && existing !== undefined) {
@@ -313,8 +306,13 @@ export class CircuitCanvas extends Node {
         this.connectors[s] = null;
       }
 
-      const { hasControl, swapCount, top, bottom } = this.scanColumn(circuit, s, qubitCount);
-      const shouldConnect = (hasControl || swapCount === 2) && top !== -1 && bottom > top;
+      const shape = classifyColumn(circuit, s, qubitCount);
+      const occupied = [...shape.onControls, ...shape.offControls, ...shape.swapWires, ...shape.gateWires];
+      const hasControl = columnHasControl(shape);
+      const top = occupied.length > 0 ? Math.min(...occupied) : -1;
+      const bottom = occupied.length > 0 ? Math.max(...occupied) : -1;
+
+      const shouldConnect = (hasControl || shape.swapWires.length === 2) && top !== -1 && bottom > top;
       if (shouldConnect) {
         const line = new Line(slotCenterX(s), slotCenterY(top), slotCenterX(s), slotCenterY(bottom), {
           stroke: hasControl ? QubitSketchColors.controlDotColorProperty : QubitSketchColors.swapMarkerColorProperty,
@@ -325,38 +323,6 @@ export class CircuitCanvas extends Node {
         this.connectors[s] = line;
       }
     }
-  }
-
-  /**
-   * Scans one column's visible rows, reporting whether it holds any control and how
-   * many SWAP endpoints it has, plus the topmost/bottommost occupied wire (−1 if none).
-   */
-  private scanColumn(
-    circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>,
-    step: number,
-    qubitCount: number,
-  ): { hasControl: boolean; swapCount: number; top: number; bottom: number } {
-    let hasControl = false;
-    let swapCount = 0;
-    let top = -1;
-    let bottom = -1;
-    for (let q = 0; q < qubitCount; q++) {
-      const cell = circuit[q]?.[step] ?? { kind: "empty" };
-      if (cell.kind === "empty") {
-        continue;
-      }
-      if (isAnyControl(cell)) {
-        hasControl = true;
-      }
-      if (cell.kind === "swap") {
-        swapCount++;
-      }
-      if (top === -1) {
-        top = q;
-      }
-      bottom = q;
-    }
-    return { hasControl, swapCount, top, bottom };
   }
 
   /**

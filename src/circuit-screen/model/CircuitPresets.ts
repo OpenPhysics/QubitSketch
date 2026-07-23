@@ -10,10 +10,11 @@
  * `control`/`antiControl` cell sharing a column with a `controlledTarget`, and two `swap` cells
  * in one column exchange those wires.
  */
+import type { MutableGrid } from "./CircuitGrid.js";
+import { emptyGrid } from "./CircuitGrid.js";
 import type { CircuitCell, GateType, RotationAxis } from "./GateType.js";
-import { EMPTY_CELL, MAX_QUBITS, NUM_STEPS } from "./GateType.js";
 
-type Grid = CircuitCell[][];
+type Grid = MutableGrid;
 
 /** A named, ready-to-load example circuit. `id` keys the localized name in StringManager. */
 export type CircuitPreset = {
@@ -21,11 +22,6 @@ export type CircuitPreset = {
   readonly qubitCount: number;
   readonly build: () => Grid;
 };
-
-/** A fresh MAX_QUBITS × NUM_STEPS grid of empty cells (mirrors QubitSketchModel.emptyCircuit). */
-function emptyGrid(): Grid {
-  return Array.from({ length: MAX_QUBITS }, () => Array.from({ length: NUM_STEPS }, (): CircuitCell => EMPTY_CELL));
-}
 
 // ── Cell-placement helpers (mutate `g` at [qubit][col]) ──────────────────────────────────────
 const set = (g: Grid, q: number, col: number, cell: CircuitCell): void => {

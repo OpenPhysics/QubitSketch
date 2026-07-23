@@ -18,6 +18,7 @@ import type { Vector3 } from "scenerystack/dot";
 import { Circle, DragListener, KeyboardDragListener, Node, Rectangle, Text } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import { BlochSphereNode } from "./BlochSphereNode.js";
 
 const BIG_RADIUS = 46;
@@ -104,7 +105,7 @@ export class BlochSpheresNode extends Node {
 
     // "qN" caption naming the focused qubit.
     this.bigLabel = new Text("q0", {
-      font: "bold 12px monospace",
+      font: FONTS.blochLabel,
       fill: QubitSketchColors.textColorProperty,
       centerX: width / 2,
       top: this.bigSphere.bottom + 2,
@@ -158,7 +159,7 @@ export class BlochSpheresNode extends Node {
         pickable: false,
       });
       const label = new Text(`q${q}`, {
-        font: "9px monospace",
+        font: FONTS.monoTick,
         fill: QubitSketchColors.textColorProperty,
         centerX: cx,
         top: 2 * r + 3,
