@@ -92,9 +92,12 @@ export function applySwap(state: Complex[], a: number, b: number): void {
     // Visit each differing pair once: bit a = 0, bit b = 1.
     if ((i & aBit) === 0 && (i & bBit) !== 0) {
       const j = (i | aBit) & ~bBit; // partner with bit a = 1, bit b = 0
-      const tmp = state[i]!;
-      state[i] = state[j]!;
-      state[j] = tmp;
+      const si = state[i];
+      const sj = state[j];
+      if (si !== undefined && sj !== undefined) {
+        state[i] = sj;
+        state[j] = si;
+      }
     }
   }
 }
@@ -152,7 +155,10 @@ function applyColumn(
 
   // SWAP: exactly two endpoints and no controls (controlled-SWAP is not supported in v1).
   if (swapWires.length === 2 && !hasControl) {
-    applySwap(state, swapWires[0]!, swapWires[1]!);
+    const [wireA, wireB] = swapWires;
+    if (wireA !== undefined && wireB !== undefined) {
+      applySwap(state, wireA, wireB);
+    }
     return;
   }
 
@@ -213,13 +219,19 @@ export function computeBlochVectors(state: Complex[], n: number): Vector3[] {
     let y = 0;
     let z = 0;
     for (let i = 0; i < state.length; i++) {
-      const amp = state[i]!;
+      const amp = state[i];
+      if (amp === undefined) {
+        continue;
+      }
       const p = amp.magnitudeSquared;
       z += ((i & bit) === 0 ? 1 : -1) * p;
       if ((i & bit) === 0) {
-        const prod = amp.conjugated().times(state[i | bit]!);
-        x += 2 * prod.real;
-        y += 2 * prod.imaginary;
+        const partner = state[i | bit];
+        if (partner !== undefined) {
+          const prod = amp.conjugated().times(partner);
+          x += 2 * prod.real;
+          y += 2 * prod.imaginary;
+        }
       }
     }
     out.push(new Vector3(x, y, z));

@@ -76,8 +76,7 @@ export class AmplitudeTableNode extends Node {
       const fontSize = Math.max(7, Math.min(11, rowHeight - 3));
       const font = `${fontSize}px monospace`;
 
-      for (let i = 0; i < state.length; i++) {
-        const amp = state[i]!;
+      for (const [i, amp] of state.entries()) {
         const y = i * rowHeight;
         const negligible = amp.magnitudeSquared < 1e-9;
         const fill = negligible ? QubitSketchColors.slotBorderColorProperty : QubitSketchColors.textColorProperty;

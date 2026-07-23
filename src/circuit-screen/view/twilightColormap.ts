@@ -532,7 +532,9 @@ export function twilightColor(t: number): Color {
   const x = wrapped * (TWILIGHT_LUT.length - 1);
   const i = Math.min(Math.floor(x), TWILIGHT_LUT.length - 2);
   const f = x - i;
-  const [r0, g0, b0] = TWILIGHT_LUT[i]!;
-  const [r1, g1, b1] = TWILIGHT_LUT[i + 1]!;
+  // i is clamped to [0, length − 2], so both lookups are in range; the ?? satisfies
+  // noUncheckedIndexedAccess without a non-null assertion.
+  const [r0, g0, b0] = TWILIGHT_LUT[i] ?? [0, 0, 0];
+  const [r1, g1, b1] = TWILIGHT_LUT[i + 1] ?? [0, 0, 0];
   return new Color(Math.round(r0 + (r1 - r0) * f), Math.round(g0 + (g1 - g0) * f), Math.round(b0 + (b1 - b0) * f));
 }
