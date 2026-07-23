@@ -48,10 +48,10 @@ function matrixNode(m: Complex2x2): Node {
   const gridWidth = 2 * CELL_WIDTH;
   const gridHeight = 2 * CELL_HEIGHT;
 
-  for (let r = 0; r < 2; r++) {
-    for (let c = 0; c < 2; c++) {
+  for (const [r, row] of m.entries()) {
+    for (const [c, value] of row.entries()) {
       node.addChild(
-        new Text(formatComplex(m[r]![c]!), {
+        new Text(formatComplex(value), {
           font: "12px monospace",
           fill: QubitSketchColors.textColorProperty,
           centerX: gridLeft + c * CELL_WIDTH + CELL_WIDTH / 2,

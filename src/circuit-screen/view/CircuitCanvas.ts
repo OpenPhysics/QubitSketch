@@ -280,7 +280,8 @@ export class CircuitCanvas extends Node {
       }
       for (let s = 0; s < NUM_STEPS; s++) {
         const cell = circuit[q]?.[s] ?? { kind: "empty" };
-        if (this.cellsEqual(cell, cellRow[s]!)) {
+        const prev = cellRow[s] ?? { kind: "empty" };
+        if (this.cellsEqual(cell, prev)) {
           continue;
         }
         // Remove the old node, if any.
@@ -312,27 +313,7 @@ export class CircuitCanvas extends Node {
         this.connectors[s] = null;
       }
 
-      let hasControl = false;
-      let swapCount = 0;
-      let top = -1;
-      let bottom = -1;
-      for (let q = 0; q < qubitCount; q++) {
-        const cell = circuit[q]?.[s] ?? { kind: "empty" };
-        if (cell.kind === "empty") {
-          continue;
-        }
-        if (isAnyControl(cell)) {
-          hasControl = true;
-        }
-        if (cell.kind === "swap") {
-          swapCount++;
-        }
-        if (top === -1) {
-          top = q;
-        }
-        bottom = q;
-      }
-
+      const { hasControl, swapCount, top, bottom } = this.scanColumn(circuit, s, qubitCount);
       const shouldConnect = (hasControl || swapCount === 2) && top !== -1 && bottom > top;
       if (shouldConnect) {
         const line = new Line(slotCenterX(s), slotCenterY(top), slotCenterX(s), slotCenterY(bottom), {
@@ -344,6 +325,38 @@ export class CircuitCanvas extends Node {
         this.connectors[s] = line;
       }
     }
+  }
+
+  /**
+   * Scans one column's visible rows, reporting whether it holds any control and how
+   * many SWAP endpoints it has, plus the topmost/bottommost occupied wire (−1 if none).
+   */
+  private scanColumn(
+    circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>,
+    step: number,
+    qubitCount: number,
+  ): { hasControl: boolean; swapCount: number; top: number; bottom: number } {
+    let hasControl = false;
+    let swapCount = 0;
+    let top = -1;
+    let bottom = -1;
+    for (let q = 0; q < qubitCount; q++) {
+      const cell = circuit[q]?.[step] ?? { kind: "empty" };
+      if (cell.kind === "empty") {
+        continue;
+      }
+      if (isAnyControl(cell)) {
+        hasControl = true;
+      }
+      if (cell.kind === "swap") {
+        swapCount++;
+      }
+      if (top === -1) {
+        top = q;
+      }
+      bottom = q;
+    }
+    return { hasControl, swapCount, top, bottom };
   }
 
   /**

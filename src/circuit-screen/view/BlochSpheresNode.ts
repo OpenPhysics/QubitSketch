@@ -190,8 +190,7 @@ export class BlochSpheresNode extends Node {
     this.bigLabel.string = `q${selected}`;
     this.bigLabel.centerX = this.availableWidth / 2;
 
-    for (let q = 0; q < this.thumbs.length; q++) {
-      const { sphere, ring } = this.thumbs[q]!;
+    for (const [q, { sphere, ring }] of this.thumbs.entries()) {
       sphere.render(vectors[q] ?? null, azimuth, elevation);
       ring.visible = q === selected;
     }

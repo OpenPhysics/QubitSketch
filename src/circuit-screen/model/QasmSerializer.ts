@@ -285,10 +285,11 @@ function parseOperands(operandStr: string): number[] | null {
   const indices: number[] = [];
   for (const part of parts) {
     const m = part.match(/^[A-Za-z_]\w*\s*\[\s*(\d+)\s*\]$/);
-    if (m === null) {
+    const digits = m?.[1];
+    if (digits === undefined) {
       return null;
     }
-    indices.push(Number.parseInt(m[1]!, 10));
+    indices.push(Number.parseInt(digits, 10));
   }
   return indices;
 }
@@ -312,54 +313,73 @@ function spanOp(placements: Array<{ wire: number; cell: CircuitCell }>): ParsedO
   return { placements, spanLo: Math.min(...wires), spanHi: Math.max(...wires), exclusive };
 }
 
-/** Turns one gate statement into a {@link ParsedOp}, or null if it is unsupported / malformed. */
-function parseGateStatement(name: string, param: string | undefined, operands: number[]): ParsedOp | null {
-  const angle = (): number | null => (param === undefined ? null : parseAngle(param));
+/** Single-qubit gate/rotation (one operand), or null if unsupported / malformed. */
+function parseSingleQubitStatement(name: string, param: string | undefined, operands: number[]): ParsedOp | null {
+  if (operands.length !== 1) {
+    return null;
+  }
+  const [wire] = operands;
+  if (wire === undefined) {
+    return null;
+  }
+  if (name in QASM_TO_GATE) {
+    const gate = QASM_TO_GATE[name];
+    return gate === undefined ? null : spanOp([{ wire, cell: { kind: "gate", gate } }]);
+  }
+  if (name in QASM_TO_AXIS) {
+    const axis = QASM_TO_AXIS[name];
+    const theta = param === undefined ? null : parseAngle(param);
+    return axis === undefined || theta === null ? null : spanOp([{ wire, cell: { kind: "paramGate", axis, theta } }]);
+  }
+  return null;
+}
 
-  // Single-qubit fixed gate.
-  if (name in QASM_TO_GATE && operands.length === 1) {
-    return spanOp([{ wire: operands[0]!, cell: { kind: "gate", gate: QASM_TO_GATE[name]! } }]);
-  }
-  // Single-qubit rotation.
-  if (name in QASM_TO_AXIS && operands.length === 1) {
-    const theta = angle();
-    return theta === null
-      ? null
-      : spanOp([{ wire: operands[0]!, cell: { kind: "paramGate", axis: QASM_TO_AXIS[name]!, theta } }]);
-  }
+/** Controlled / SWAP / Toffoli gate (two or three operands), or null if unsupported / malformed. */
+function parseMultiQubitStatement(name: string, param: string | undefined, operands: number[]): ParsedOp | null {
+  const [a, b, c] = operands;
+
   // Single-control fixed gate (cx, cy, cz, ch).
-  if (name in QASM_CONTROL_TO_GATE && operands.length === 2) {
-    return spanOp([
-      { wire: operands[0]!, cell: { kind: "control" } },
-      { wire: operands[1]!, cell: { kind: "controlledTarget", gate: QASM_CONTROL_TO_GATE[name]! } },
-    ]);
-  }
-  // Single-control rotation (crx, cry, crz).
-  if (name in QASM_CONTROL_TO_AXIS && operands.length === 2) {
-    const theta = angle();
-    return theta === null
+  if (name in QASM_CONTROL_TO_GATE && operands.length === 2 && a !== undefined && b !== undefined) {
+    const gate = QASM_CONTROL_TO_GATE[name];
+    return gate === undefined
       ? null
       : spanOp([
-          { wire: operands[0]!, cell: { kind: "control" } },
-          { wire: operands[1]!, cell: { kind: "paramGate", axis: QASM_CONTROL_TO_AXIS[name]!, theta } },
+          { wire: a, cell: { kind: "control" } },
+          { wire: b, cell: { kind: "controlledTarget", gate } },
+        ]);
+  }
+  // Single-control rotation (crx, cry, crz).
+  if (name in QASM_CONTROL_TO_AXIS && operands.length === 2 && a !== undefined && b !== undefined) {
+    const axis = QASM_CONTROL_TO_AXIS[name];
+    const theta = param === undefined ? null : parseAngle(param);
+    return axis === undefined || theta === null
+      ? null
+      : spanOp([
+          { wire: a, cell: { kind: "control" } },
+          { wire: b, cell: { kind: "paramGate", axis, theta } },
         ]);
   }
   // Toffoli.
-  if (name === "ccx" && operands.length === 3) {
+  if (name === "ccx" && operands.length === 3 && a !== undefined && b !== undefined && c !== undefined) {
     return spanOp([
-      { wire: operands[0]!, cell: { kind: "control" } },
-      { wire: operands[1]!, cell: { kind: "control" } },
-      { wire: operands[2]!, cell: { kind: "controlledTarget", gate: "X" } },
+      { wire: a, cell: { kind: "control" } },
+      { wire: b, cell: { kind: "control" } },
+      { wire: c, cell: { kind: "controlledTarget", gate: "X" } },
     ]);
   }
   // Swap.
-  if (name === "swap" && operands.length === 2) {
+  if (name === "swap" && operands.length === 2 && a !== undefined && b !== undefined) {
     return spanOp([
-      { wire: operands[0]!, cell: { kind: "swap" } },
-      { wire: operands[1]!, cell: { kind: "swap" } },
+      { wire: a, cell: { kind: "swap" } },
+      { wire: b, cell: { kind: "swap" } },
     ]);
   }
   return null;
+}
+
+/** Turns one gate statement into a {@link ParsedOp}, or null if it is unsupported / malformed. */
+function parseGateStatement(name: string, param: string | undefined, operands: number[]): ParsedOp | null {
+  return parseSingleQubitStatement(name, param, operands) ?? parseMultiQubitStatement(name, param, operands);
 }
 
 /** Parses the size out of a `qreg name[N]` declaration body, or null if malformed. */
@@ -447,7 +467,7 @@ function packOpsIntoColumns(ops: readonly ParsedOp[]): CircuitCell[][] | null {
   for (const op of ops) {
     let col = 0;
     for (let w = op.spanLo; w <= op.spanHi; w++) {
-      col = Math.max(col, nextFree[w]!);
+      col = Math.max(col, nextFree[w] ?? 0);
     }
     while (col < NUM_STEPS && (columnState[col] === "exclusive" || (op.exclusive && columnState[col] !== "empty"))) {
       col++;
@@ -456,7 +476,10 @@ function packOpsIntoColumns(ops: readonly ParsedOp[]): CircuitCell[][] | null {
       return null;
     }
     for (const { wire, cell } of op.placements) {
-      circuit[wire]![col] = cell;
+      const row = circuit[wire];
+      if (row !== undefined) {
+        row[col] = cell;
+      }
     }
     columnState[col] = op.exclusive ? "exclusive" : "gates";
     for (let w = op.spanLo; w <= op.spanHi; w++) {
