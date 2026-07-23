@@ -34,11 +34,21 @@ function load(model: QubitSketchModel): void {
 }
 
 /**
- * Wires URL ↔ model syncing. Safe to call once at model creation. No-op outside a browser.
+ * Wires URL ↔ model syncing. Safe to call once at model creation.
+ *
+ * Returns a disposer that removes the global `hashchange` listener and unlinks
+ * the model Property listeners. The `hashchange` listener lives on `window`,
+ * which never releases it on its own and whose closure captures the model, so
+ * the disposer MUST be called when the model is torn down — otherwise `window`
+ * retains the model for the lifetime of the page (a leak whenever a new model is
+ * created, e.g. tests or hot-reload). No-op (returns a no-op disposer) outside a
+ * browser.
  */
-export function attachUrlSync(model: QubitSketchModel): void {
+export function attachUrlSync(model: QubitSketchModel): () => void {
   if (typeof window === "undefined") {
-    return;
+    return () => {
+      /* no window to detach from */
+    };
   }
 
   let suppress = false;
@@ -71,7 +81,7 @@ export function attachUrlSync(model: QubitSketchModel): void {
   // back/forward across hashes) should load that circuit. Our own writes use replaceState,
   // which never fires hashchange. Loading via loadCircuit keeps the previous circuit
   // recoverable with undo.
-  window.addEventListener("hashchange", () => {
+  const onHashChange = (): void => {
     const raw = window.location.hash.replace(/^#/, "");
     const encoded = new URLSearchParams(raw).get(HASH_KEY);
     if (encoded === null || encoded === serialize(model.circuitProperty.value, model.qubitCountProperty.value)) {
@@ -81,5 +91,12 @@ export function attachUrlSync(model: QubitSketchModel): void {
     if (parsed !== null) {
       model.loadCircuit(parsed.circuit, parsed.qubitCount);
     }
-  });
+  };
+  window.addEventListener("hashchange", onHashChange);
+
+  return () => {
+    window.removeEventListener("hashchange", onHashChange);
+    model.circuitProperty.unlink(save);
+    model.qubitCountProperty.unlink(save);
+  };
 }
