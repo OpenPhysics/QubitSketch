@@ -97,3 +97,5 @@ export type SelectedTool = GateType | "control" | "antiControl" | "swap" | Rotat
 export const NUM_STEPS = 8;
 export const MAX_QUBITS = 5;
 export const MIN_QUBITS = 1;
+/** Default number of visible qubit wires when no preference/query-parameter overrides it. */
+export const DEFAULT_QUBITS = 3;

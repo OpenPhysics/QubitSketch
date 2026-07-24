@@ -18,11 +18,18 @@ import type { Complex, Vector3 } from "scenerystack/dot";
 import { Range } from "scenerystack/dot";
 import type { TModel } from "scenerystack/joist";
 import type { QubitSketchPreferencesModel } from "../../preferences/QubitSketchPreferencesModel.js";
-import qubitSketchQueryParameters from "../../preferences/qubitSketchQueryParameters.js";
 import type { ColumnShape, Grid } from "./CircuitGrid.js";
 import { cellAt, classifyColumn, columnHasControl, emptyGrid, withCell } from "./CircuitGrid.js";
 import type { CircuitCell, GateType, SelectedTool } from "./GateType.js";
-import { cellsEqual, EMPTY_CELL, MAX_QUBITS, MIN_QUBITS, NUM_STEPS, ROTATION_TOOL_AXIS } from "./GateType.js";
+import {
+  cellsEqual,
+  DEFAULT_QUBITS,
+  EMPTY_CELL,
+  MAX_QUBITS,
+  MIN_QUBITS,
+  NUM_STEPS,
+  ROTATION_TOOL_AXIS,
+} from "./GateType.js";
 import { computeBlochVectors, simulate } from "./QuantumSimulator.js";
 
 /** A position in the circuit grid. */
@@ -32,13 +39,11 @@ export type GridPosition = { readonly qubit: number; readonly step: number };
 type CircuitSnapshot = { readonly circuit: Grid; readonly qubitCount: number };
 
 export class QubitSketchModel implements TModel {
-  private readonly _qubitCountProperty = new NumberProperty(qubitSketchQueryParameters.qubits, {
-    range: new Range(MIN_QUBITS, MAX_QUBITS),
-    numberType: "Integer",
-  });
+  /** Backing store for the qubit count; its initial value is injected via the constructor. */
+  private readonly _qubitCountProperty: NumberProperty;
 
   /** Number of visible qubit wires (1–MAX_QUBITS). Mutate via setQubitCount/loadCircuit/reset. */
-  public readonly qubitCountProperty: ReadOnlyProperty<number> = this._qubitCountProperty;
+  public readonly qubitCountProperty: ReadOnlyProperty<number>;
 
   public readonly selectedToolProperty: Property<SelectedTool> = new Property<SelectedTool>("H");
 
@@ -90,9 +95,14 @@ export class QubitSketchModel implements TModel {
 
   public constructor(preferences?: QubitSketchPreferencesModel) {
     this.preferences = preferences;
-    if (preferences) {
-      this._qubitCountProperty.value = preferences.qubitCountProperty.value;
-    }
+    // The initial qubit count comes from the injected preferences model (whose own initial value
+    // derives from the ?qubits= query parameter), or the plain default when constructed without one.
+    this._qubitCountProperty = new NumberProperty(preferences?.qubitCountProperty.value ?? DEFAULT_QUBITS, {
+      range: new Range(MIN_QUBITS, MAX_QUBITS),
+      numberType: "Integer",
+    });
+    this.qubitCountProperty = this._qubitCountProperty;
+
     this._circuitProperty = new Property<Grid>(emptyGrid());
     this.circuitProperty = this._circuitProperty;
 
