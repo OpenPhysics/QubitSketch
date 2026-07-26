@@ -19,12 +19,12 @@ import { Range } from "scenerystack/dot";
 import type { TModel } from "scenerystack/joist";
 import type { QubitSketchPreferencesModel } from "../../preferences/QubitSketchPreferencesModel.js";
 import qubitSketchQueryParameters from "../../preferences/qubitSketchQueryParameters.js";
+import { censusColumn, isApplicableColumn } from "./ColumnRules.js";
 import type { CircuitCell, GateType, SelectedTool } from "./GateType.js";
 import {
   cellsEqual,
   EMPTY_CELL,
   isAnyControl,
-  isGateBearing,
   MAX_QUBITS,
   MIN_QUBITS,
   NUM_STEPS,
@@ -115,9 +115,12 @@ export class QubitSketchModel implements TModel {
       computeBlochVectors(state, n),
     );
 
-    this.circuitDepthProperty = new DerivedProperty([this.circuitProperty], (circuit) => {
+    // Only the visible wires are simulated, so only they can extend the inspect range. Counting
+    // hidden rows would let a gate parked on a hidden wire stretch the slider past anything the
+    // student can see or that affects the state.
+    this.circuitDepthProperty = new DerivedProperty([this.circuitProperty, this.qubitCountProperty], (circuit, n) => {
       let depth = 0;
-      for (let q = 0; q < MAX_QUBITS; q++) {
+      for (let q = 0; q < n; q++) {
         for (let s = NUM_STEPS - 1; s >= depth; s--) {
           if ((circuit[q]?.[s] ?? EMPTY_CELL).kind !== "empty") {
             depth = s + 1;
@@ -149,6 +152,11 @@ export class QubitSketchModel implements TModel {
   /**
    * True if any VISIBLE cell in the given step (column) is a control of either polarity (• or ◦).
    * Hidden rows (q ≥ qubitCount) are excluded to match the simulator, which ignores them.
+   *
+   * Used only to pick between the `gate` and `controlledTarget` cell kinds, which is purely
+   * cosmetic (both are gate-bearing, and CircuitCanvas renders them identically) — so this
+   * deliberately reflects what is controlled at the CURRENT wire count. Legality is a separate,
+   * grid-wide question; see {@link wouldRemainApplicable}.
    */
   private columnHasControl(stepIndex: number, exceptQubit: number): boolean {
     const circuit = this.circuitProperty.value;
@@ -161,42 +169,22 @@ export class QubitSketchModel implements TModel {
     return false;
   }
 
-  /** Number of SWAP endpoints already in the given column's visible rows (excluding `exceptQubit`). */
-  private columnSwapCount(stepIndex: number, exceptQubit: number): number {
-    const circuit = this.circuitProperty.value;
-    const n = this.qubitCountProperty.value;
-    let count = 0;
-    for (let q = 0; q < n; q++) {
-      if (q !== exceptQubit && (circuit[q]?.[stepIndex] ?? EMPTY_CELL).kind === "swap") {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  /** Number of gate-bearing cells (fixed gate, controlled target, or rotation) in the column's visible rows. */
-  private columnGateCount(stepIndex: number, exceptQubit: number): number {
-    const circuit = this.circuitProperty.value;
-    const n = this.qubitCountProperty.value;
-    let count = 0;
-    for (let q = 0; q < n; q++) {
-      if (q !== exceptQubit && isGateBearing(circuit[q]?.[stepIndex] ?? EMPTY_CELL)) {
-        count++;
-      }
-    }
-    return count;
-  }
-
   /**
-   * True if a gate-bearing cell may be placed at the position — refused when the column already
-   * holds a SWAP endpoint or is a controlled column with its (single) target taken. Both would
-   * otherwise place a gate the simulator silently ignores under the v1 column rules.
+   * True if writing `cell` at the position would leave that column a shape the simulator applies
+   * in full (see ColumnRules). This is the one guard behind every placement refusal.
+   *
+   * It scans ALL MAX_QUBITS rows, not just the visible ones: a cell parked on a hidden wire
+   * re-enters the simulation the moment the user grows the wire count, so a column that is legal
+   * only while part of it is hidden would then have a gate silently dropped — a gate the canvas
+   * still draws. Checking the whole grid keeps the invariant true at every wire count.
    */
-  private canPlaceGate(qubitIndex: number, stepIndex: number): boolean {
-    if (this.columnSwapCount(stepIndex, qubitIndex) > 0) {
-      return false;
+  private wouldRemainApplicable(qubitIndex: number, stepIndex: number, cell: CircuitCell): boolean {
+    const circuit = this.circuitProperty.value;
+    const column: CircuitCell[] = [];
+    for (let q = 0; q < MAX_QUBITS; q++) {
+      column.push(q === qubitIndex ? cell : (circuit[q]?.[stepIndex] ?? EMPTY_CELL));
     }
-    return !(this.columnHasControl(stepIndex, qubitIndex) && this.columnGateCount(stepIndex, qubitIndex) > 0);
+    return isApplicableColumn(censusColumn(column));
   }
 
   /**
@@ -212,18 +200,9 @@ export class QubitSketchModel implements TModel {
     if (current.kind === tool) {
       return EMPTY_CELL;
     }
-    if (tool === "swap") {
-      // A column holds at most one SWAP pair, and the pair must have the column to itself.
-      const allowed =
-        this.columnSwapCount(stepIndex, qubitIndex) < 2 &&
-        !this.columnHasControl(stepIndex, qubitIndex) &&
-        this.columnGateCount(stepIndex, qubitIndex) === 0;
-      return allowed ? { kind: "swap" } : null;
-    }
-    // Refused when it would demote all but one gate to dead cells, or condition an unsupported controlled-SWAP.
-    const allowed =
-      this.columnGateCount(stepIndex, qubitIndex) < 2 && this.columnSwapCount(stepIndex, qubitIndex) === 0;
-    return allowed ? (tool === "control" ? { kind: "control" } : { kind: "antiControl" }) : null;
+    const cell: CircuitCell =
+      tool === "swap" ? { kind: "swap" } : tool === "control" ? { kind: "control" } : { kind: "antiControl" };
+    return this.wouldRemainApplicable(qubitIndex, stepIndex, cell) ? cell : null;
   }
 
   /**
@@ -250,16 +229,17 @@ export class QubitSketchModel implements TModel {
       if (current.kind === "paramGate" && current.axis === axis) {
         return EMPTY_CELL;
       }
-      return this.canPlaceGate(qubitIndex, stepIndex) ? { kind: "paramGate", axis, theta: Math.PI / 2 } : null;
+      const rotation: CircuitCell = { kind: "paramGate", axis, theta: Math.PI / 2 };
+      return this.wouldRemainApplicable(qubitIndex, stepIndex, rotation) ? rotation : null;
     }
     const gate: GateType = tool;
     if ((current.kind === "gate" || current.kind === "controlledTarget") && current.gate === gate) {
       return EMPTY_CELL;
     }
-    if (!this.canPlaceGate(qubitIndex, stepIndex)) {
-      return null;
-    }
-    return this.columnHasControl(stepIndex, qubitIndex) ? { kind: "controlledTarget", gate } : { kind: "gate", gate };
+    const placed: CircuitCell = this.columnHasControl(stepIndex, qubitIndex)
+      ? { kind: "controlledTarget", gate }
+      : { kind: "gate", gate };
+    return this.wouldRemainApplicable(qubitIndex, stepIndex, placed) ? placed : null;
   }
 
   /**

@@ -158,7 +158,15 @@ function adder(): Grid {
   return g;
 }
 
-/** Delayed-choice quantum eraser: which-path info is written, then erased so interference returns. */
+/**
+ * Delayed-choice quantum eraser: which-path info is written into a marker qubit, then erased.
+ *
+ * Reading the display: the final state is (|00⟩+|11⟩)/√2, so q0 on its own is still 50/50 — the
+ * restored interference shows up as the perfect CORRELATION between q0 and the marker, not as a
+ * change in q0's probability bar. Recovering a single-qubit fringe pattern would require
+ * conditioning on the marker's outcome, and this tool has no mid-circuit measurement (see
+ * doc/model.md). The joint distribution is where the erasure is visible.
+ */
 function eraser(): Grid {
   const g = emptyGrid();
   gate(g, 0, 0, "H"); // path superposition
