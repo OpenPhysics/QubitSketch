@@ -58,6 +58,9 @@ export function applyControlledGate(
     controlMask |= 1 << c;
   }
 
+  // Complex2x2 is a fixed-length tuple, so this destructure is total — no per-iteration checks.
+  const [[m00, m01], [m10, m11]] = m;
+
   for (let i = 0; i < state.length; i++) {
     // Visit only the "0 at target" member of each pair, and only when the controls match.
     if ((i & targetBit) !== 0 || (i & controlMask) !== controlValue) {
@@ -66,12 +69,11 @@ export function applyControlledGate(
     const j = i | targetBit; // partner with "1 at target"
     const a0 = state[i];
     const a1 = state[j];
-    const m00 = m[0]?.[0];
-    const m01 = m[0]?.[1];
-    const m10 = m[1]?.[0];
-    const m11 = m[1]?.[1];
-    if (a0 === undefined || a1 === undefined || !m00 || !m01 || !m10 || !m11) {
-      continue;
+    if (a0 === undefined || a1 === undefined) {
+      // Unreachable: `simulate` builds a dense array and both indices are < state.length. Throwing
+      // rather than skipping means a sparse `state` from a future caller fails loudly instead of
+      // yielding a silently non-unitary result.
+      throw new Error(`applyControlledGate: statevector hole at index ${i} or ${j}`);
     }
     state[i] = m00.times(a0).plus(m01.times(a1));
     state[j] = m10.times(a0).plus(m11.times(a1));
@@ -94,10 +96,12 @@ export function applySwap(state: Complex[], a: number, b: number): void {
       const j = (i | aBit) & ~bBit; // partner with bit a = 1, bit b = 0
       const si = state[i];
       const sj = state[j];
-      if (si !== undefined && sj !== undefined) {
-        state[i] = sj;
-        state[j] = si;
+      if (si === undefined || sj === undefined) {
+        // Unreachable for a dense statevector; see the note in applyControlledGate.
+        throw new Error(`applySwap: statevector hole at index ${i} or ${j}`);
       }
+      state[i] = sj;
+      state[j] = si;
     }
   }
 }

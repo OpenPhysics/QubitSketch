@@ -60,12 +60,32 @@ export function ketLabel(i: number, n: number): string {
   return `|${bits}⟩`;
 }
 
+/**
+ * True minus sign (U+2212). `toFixed` emits an ASCII hyphen, which is narrower than the "+" it
+ * alternates with in an amplitude like "0.71+0.00i" — so every sign this module renders goes
+ * through {@link toFixedSigned} or uses this constant, never a bare hyphen.
+ */
+const MINUS_SIGN = "−";
+
+/**
+ * `toFixed` with the ASCII hyphen swapped for a true minus sign. A value that rounds to zero
+ * loses its sign entirely, so a tiny negative amplitude reads "0.00" rather than "−0.00".
+ */
+function toFixedSigned(value: number, digits: number): string {
+  const text = toFixed(value, digits);
+  if (/^-0(\.0*)?$/.test(text)) {
+    return text.slice(1);
+  }
+  return text.replace("-", MINUS_SIGN);
+}
+
 /** Formats a complex amplitude as "a+bi" with fixed precision (e.g. "0.71+0.00i"). */
 export function formatComplex(c: Complex, digits = 2): string {
-  const re = toFixed(c.real, digits);
+  const re = toFixedSigned(c.real, digits);
   const im = toFixed(Math.abs(c.imaginary), digits);
-  const sign = c.imaginary < 0 ? "−" : "+";
-  return `${re}${sign}${im}i`;
+  // Take the sign from the ROUNDED magnitude, so a vanishing imaginary part never reads "−0.00i".
+  const negative = c.imaginary < 0 && Number.parseFloat(im) !== 0;
+  return `${re}${negative ? MINUS_SIGN : "+"}${im}i`;
 }
 
 /** Formats a phase in radians as a degree string (e.g. "90°"); blank for ~zero amplitude. */
@@ -74,5 +94,5 @@ export function formatPhase(c: Complex, threshold = NEGLIGIBLE_AMPLITUDE): strin
     return "—";
   }
   const deg = (c.phase() * 180) / Math.PI;
-  return `${toFixed(deg, 0)}°`;
+  return `${toFixedSigned(deg, 0)}°`;
 }
