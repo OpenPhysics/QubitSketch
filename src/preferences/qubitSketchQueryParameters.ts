@@ -10,14 +10,14 @@
 
 import { logGlobal } from "scenerystack/phet-core";
 import { QueryStringMachine } from "scenerystack/query-string-machine";
-import { MAX_QUBITS, MIN_QUBITS } from "../circuit-screen/model/GateType.js";
+import { DEFAULT_QUBITS, MAX_QUBITS, MIN_QUBITS } from "../circuit-screen/model/GateType.js";
 import QubitSketchNamespace from "../QubitSketchNamespace.js";
 
 const qubitSketchQueryParameters = QueryStringMachine.getAll({
   /** Initial number of visible qubit wires. */
   qubits: {
     type: "number" as const,
-    defaultValue: 3,
+    defaultValue: DEFAULT_QUBITS,
     public: true,
     isValidValue: (value: number) => Number.isInteger(value) && value >= MIN_QUBITS && value <= MAX_QUBITS,
   },

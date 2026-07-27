@@ -19,6 +19,7 @@ import { Shape } from "scenerystack/kite";
 import { Circle, Node, Path, Text } from "scenerystack/scenery";
 import { ArrowNode, ShadedSphereNode } from "scenerystack/scenery-phet";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 
 export type BlochSphereNodeOptions = {
   /** Sphere radius, in view units. */
@@ -114,7 +115,7 @@ export class BlochSphereNode extends Node {
         ["|1⟩", new Vector3(0, 0, -1)],
       ];
       for (const [label, point] of labelData) {
-        const text = new Text(label, { font: "11px sans-serif", fill: outline, pickable: false });
+        const text = new Text(label, { font: FONTS.captionSmall, fill: outline, pickable: false });
         this.axisLabels.push({ text, point });
         this.addChild(text);
       }

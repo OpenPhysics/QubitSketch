@@ -9,8 +9,6 @@
  *   - Qubit count row    — above the circuit (+ / − buttons + count display)
  *   - Reset All button   — bottom-right corner (PhET convention)
  */
-import { DerivedProperty } from "scenerystack/axon";
-import { StringUtils } from "scenerystack/phetcommon";
 import { Node, Rectangle, Text } from "scenerystack/scenery";
 import { ResetAllButton } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
@@ -19,7 +17,8 @@ import { FlatAppearanceStrategy, RectangularPushButton } from "scenerystack/sun"
 import { FLAT_RESET_ALL_BUTTON_OPTIONS } from "../../common/QubitSketchButtonOptions.js";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
-import { QUBIT_COUNT_CONTROL, SCREEN_VIEW_MARGIN } from "../../QubitSketchConstants.js";
+import { SCREEN_VIEW_MARGIN } from "../../QubitSketchConstants.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import { CIRCUIT_CANVAS_HEIGHT, CIRCUIT_CANVAS_WIDTH, CircuitCanvas } from "./CircuitCanvas.js";
 import { CircuitScreenSummaryContent } from "./CircuitScreenSummaryContent.js";
@@ -28,6 +27,7 @@ import { GateInspectorNode } from "./GateInspectorNode.js";
 import { GatePalettePanel } from "./GatePalettePanel.js";
 import { InspectControlNode } from "./InspectControlNode.js";
 import { createQasmDialogOpener } from "./QasmDialog.js";
+import { QubitCountControl } from "./QubitCountControl.js";
 import { SimulationPanel } from "./SimulationPanel.js";
 import { attachUndoRedoKeyboardShortcuts } from "./undoRedoKeyboardShortcuts.js";
 
@@ -70,7 +70,7 @@ export class CircuitScreenView extends ScreenView {
     this.addChild(simulationPanel);
 
     // ── Qubit count control (above circuit) ───────────────────────────────────
-    const qubitControlNode = this.buildQubitCountControl(model);
+    const qubitControlNode = new QubitCountControl(model);
 
     // Position circuit canvas: centered horizontally between the palette and the panel
     const availableLeft = palette.right + SCREEN_VIEW_MARGIN;
@@ -103,14 +103,14 @@ export class CircuitScreenView extends ScreenView {
     const a11yControls = StringManager.getInstance().getA11yStrings().controls;
     const undoButton = new RectangularPushButton({
       ...buttonAppearance,
-      content: new Text("↶", { font: "bold 18px sans-serif", fill: QubitSketchColors.textColorProperty }),
+      content: new Text("↶", { font: FONTS.toolbarGlyph, fill: QubitSketchColors.textColorProperty }),
       listener: () => model.undo(),
       enabledProperty: model.canUndoProperty,
       accessibleName: a11yControls.undoStringProperty,
     });
     const redoButton = new RectangularPushButton({
       ...buttonAppearance,
-      content: new Text("↷", { font: "bold 18px sans-serif", fill: QubitSketchColors.textColorProperty }),
+      content: new Text("↷", { font: FONTS.toolbarGlyph, fill: QubitSketchColors.textColorProperty }),
       listener: () => model.redo(),
       enabledProperty: model.canRedoProperty,
       accessibleName: a11yControls.redoStringProperty,
@@ -157,7 +157,7 @@ export class CircuitScreenView extends ScreenView {
     const qasmButton = new RectangularPushButton({
       ...buttonAppearance,
       content: new Text(StringManager.getInstance().getQasmStrings().buttonStringProperty, {
-        font: "bold 14px sans-serif",
+        font: FONTS.panelTitle,
         fill: QubitSketchColors.textColorProperty,
       }),
       listener: openQasmDialog,
@@ -192,94 +192,6 @@ export class CircuitScreenView extends ScreenView {
         ],
       }),
     );
-  }
-
-  /**
-   * Builds the qubit count control: a "−" button, a count readout, and a "+" button.
-   */
-  private buildQubitCountControl(model: QubitSketchModel): Node {
-    const { BUTTON_SIZE, BUTTON_RADIUS, READOUT_WIDTH, READOUT_HEIGHT, SPACING } = QUBIT_COUNT_CONTROL;
-
-    const container = new Node();
-
-    // "−" button
-    const minusBox = new Rectangle(0, 0, BUTTON_SIZE, BUTTON_SIZE, {
-      fill: QubitSketchColors.buttonColorProperty,
-      stroke: QubitSketchColors.buttonStrokeColorProperty,
-      lineWidth: 1,
-      cornerRadius: BUTTON_RADIUS,
-      cursor: "pointer",
-    });
-    const minusLabel = new Text("−", {
-      font: "bold 20px sans-serif",
-      fill: QubitSketchColors.textColorProperty,
-      centerX: BUTTON_SIZE / 2,
-      centerY: BUTTON_SIZE / 2,
-      pickable: false,
-    });
-    minusBox.addChild(minusLabel);
-    minusBox.addInputListener({
-      down: () => model.setQubitCount(model.qubitCountProperty.value - 1),
-    });
-    container.addChild(minusBox);
-
-    // Count readout
-    const readoutX = BUTTON_SIZE + SPACING;
-    const readoutBox = new Rectangle(readoutX, 0, READOUT_WIDTH, READOUT_HEIGHT, {
-      fill: QubitSketchColors.slotBackgroundColorProperty,
-      stroke: QubitSketchColors.panelBorderColorProperty,
-      lineWidth: 1,
-      cornerRadius: BUTTON_RADIUS,
-      pickable: false,
-    });
-    container.addChild(readoutBox);
-
-    const qubitSelectorStrings = StringManager.getInstance().getQubitSelectorStrings();
-    const readoutStringProperty = new DerivedProperty(
-      [
-        model.qubitCountProperty,
-        qubitSelectorStrings.qubitCountSingularPatternStringProperty,
-        qubitSelectorStrings.qubitCountPluralPatternStringProperty,
-      ],
-      (count, singular, plural) => StringUtils.fillIn(count === 1 ? singular : plural, { count }),
-    );
-    const readoutText = new Text(readoutStringProperty, {
-      font: "14px sans-serif",
-      fill: QubitSketchColors.textColorProperty,
-      centerX: readoutX + READOUT_WIDTH / 2,
-      centerY: BUTTON_SIZE / 2,
-      pickable: false,
-    });
-    container.addChild(readoutText);
-
-    // "+" button
-    const plusX = readoutX + READOUT_WIDTH + SPACING;
-    const plusBox = new Rectangle(plusX, 0, BUTTON_SIZE, BUTTON_SIZE, {
-      fill: QubitSketchColors.buttonColorProperty,
-      stroke: QubitSketchColors.buttonStrokeColorProperty,
-      lineWidth: 1,
-      cornerRadius: BUTTON_RADIUS,
-      cursor: "pointer",
-    });
-    const plusLabel = new Text("+", {
-      font: "bold 20px sans-serif",
-      fill: QubitSketchColors.textColorProperty,
-      centerX: plusX + BUTTON_SIZE / 2,
-      centerY: BUTTON_SIZE / 2,
-      pickable: false,
-    });
-    plusBox.addChild(plusLabel);
-    plusBox.addInputListener({
-      down: () => model.setQubitCount(model.qubitCountProperty.value + 1),
-    });
-    container.addChild(plusBox);
-
-    // Re-center the readout whenever its text changes (qubit count or locale).
-    readoutStringProperty.link(() => {
-      readoutText.centerX = readoutX + READOUT_WIDTH / 2;
-    });
-
-    return container;
   }
 
   public reset(): void {

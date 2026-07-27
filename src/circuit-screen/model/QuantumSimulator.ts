@@ -10,6 +10,8 @@
  * GateType.ts for the matching display convention.
  */
 import { Complex, Vector3 } from "scenerystack/dot";
+import type { Grid } from "./CircuitGrid.js";
+import { cellAt, classifyColumn, columnHasControl } from "./CircuitGrid.js";
 import type { Complex2x2 } from "./GateMatrices.js";
 import { GATE_MATRICES, rotationMatrix } from "./GateMatrices.js";
 import type { CircuitCell } from "./GateType.js";
@@ -121,41 +123,9 @@ export function applySwap(state: Complex[], a: number, b: number): void {
  * (one controlled operation per column); controlled-SWAP (Fredkin) and 3+ swap endpoints
  * in a column are treated as no-ops.
  */
-function applyColumn(
-  state: Complex[],
-  n: number,
-  circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>,
-  step: number,
-): void {
-  const onControls: number[] = [];
-  const offControls: number[] = [];
-  const swapWires: number[] = [];
-  const gateWires: Array<{ wire: number; matrix: Complex2x2 }> = [];
-
-  for (let q = 0; q < n; q++) {
-    const cell = circuit[q]?.[step];
-    if (cell === undefined) {
-      continue;
-    }
-    if (cell.kind === "control") {
-      onControls.push(q);
-      continue;
-    }
-    if (cell.kind === "antiControl") {
-      offControls.push(q);
-      continue;
-    }
-    if (cell.kind === "swap") {
-      swapWires.push(q);
-      continue;
-    }
-    const m = cellMatrix(cell);
-    if (m !== null) {
-      gateWires.push({ wire: q, matrix: m });
-    }
-  }
-
-  const hasControl = onControls.length > 0 || offControls.length > 0;
+function applyColumn(state: Complex[], n: number, circuit: Grid, step: number): void {
+  const { onControls, offControls, swapWires, gateWires } = classifyColumn(circuit, step, n);
+  const hasControl = columnHasControl({ onControls, offControls, swapWires, gateWires });
 
   // SWAP: exactly two endpoints and no controls (controlled-SWAP is not supported in v1).
   if (swapWires.length === 2 && !hasControl) {
@@ -168,14 +138,20 @@ function applyColumn(
 
   if (hasControl) {
     // Controlled operation: apply the first gate target conditioned on all controls.
-    const targetGate = gateWires[0];
-    if (targetGate !== undefined) {
-      applyControlledGate(state, targetGate.wire, onControls, offControls, targetGate.matrix);
+    const targetWire = gateWires[0];
+    if (targetWire !== undefined) {
+      const m = cellMatrix(cellAt(circuit, targetWire, step));
+      if (m !== null) {
+        applyControlledGate(state, targetWire, onControls, offControls, m);
+      }
     }
     // Stray controls with no target are a no-op (documented).
   } else {
-    for (const { wire, matrix } of gateWires) {
-      applyControlledGate(state, wire, [], [], matrix);
+    for (const wire of gateWires) {
+      const m = cellMatrix(cellAt(circuit, wire, step));
+      if (m !== null) {
+        applyControlledGate(state, wire, [], [], m);
+      }
     }
   }
 }
@@ -188,11 +164,7 @@ function applyColumn(
  * step-through "inspect" mode (the state after the first k columns). Columns beyond
  * the circuit's content are empty, so any value ≥ the circuit depth gives the final state.
  */
-export function simulate(
-  circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>,
-  n: number,
-  maxColumns: number = NUM_STEPS,
-): Complex[] {
+export function simulate(circuit: Grid, n: number, maxColumns: number = NUM_STEPS): Complex[] {
   const dim = 1 << n;
   const state: Complex[] = new Array(dim);
   state[0] = Complex.ONE;

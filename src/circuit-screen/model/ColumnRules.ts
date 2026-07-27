@@ -16,10 +16,15 @@
  * Every entry point that can write a grid must agree on this predicate:
  *   - `QubitSketchModel` placement guards (interactive editing)
  *   - `CircuitSerializer.deserialize` (shared `#circuit=` links)
- *   - `QasmSerializer.packOpsIntoColumns` (OpenQASM import)
+ *   - `QasmImport.packOpsIntoColumns` (OpenQASM import)
+ *
+ * The grid vocabulary itself (the `Grid` type, bounds-safe reads, the column classifier) lives in
+ * CircuitGrid.ts; this module adds only the legality predicate on top of it.
  */
+import type { Grid } from "./CircuitGrid.js";
+import { cellAt } from "./CircuitGrid.js";
 import type { CircuitCell } from "./GateType.js";
-import { EMPTY_CELL, isAnyControl, isGateBearing, MAX_QUBITS, NUM_STEPS } from "./GateType.js";
+import { isAnyControl, isGateBearing, MAX_QUBITS, NUM_STEPS } from "./GateType.js";
 
 /** How many cells of each role a single column holds. */
 export type ColumnCensus = {
@@ -72,23 +77,16 @@ export function isApplicableColumn(census: ColumnCensus): boolean {
  * a cell parked on a hidden wire re-enters the simulation the moment the user grows the wire
  * count, so legality has to hold for every wire count, not just the current one.
  */
-export function columnCells(
-  circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>,
-  step: number,
-  rowCount: number = MAX_QUBITS,
-): CircuitCell[] {
+export function columnCells(circuit: Grid, step: number, rowCount: number = MAX_QUBITS): CircuitCell[] {
   const cells: CircuitCell[] = [];
   for (let q = 0; q < rowCount; q++) {
-    cells.push(circuit[q]?.[step] ?? EMPTY_CELL);
+    cells.push(cellAt(circuit, q, step));
   }
   return cells;
 }
 
 /** True if every column of the grid is one the simulator applies in full. */
-export function isApplicableCircuit(
-  circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>,
-  rowCount: number = MAX_QUBITS,
-): boolean {
+export function isApplicableCircuit(circuit: Grid, rowCount: number = MAX_QUBITS): boolean {
   for (let step = 0; step < NUM_STEPS; step++) {
     if (!isApplicableColumn(censusColumn(columnCells(circuit, step, rowCount)))) {
       return false;

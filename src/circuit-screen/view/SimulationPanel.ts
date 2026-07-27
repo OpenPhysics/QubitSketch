@@ -12,6 +12,7 @@ import { type Node, Text, VBox } from "scenerystack/scenery";
 import { Panel } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import { AmplitudeTableNode } from "./AmplitudeTableNode.js";
 import { BlochSpheresNode } from "./BlochSpheresNode.js";
@@ -71,7 +72,7 @@ function section(titleProperty: ReadOnlyProperty<string>, body: Node): Node {
     spacing: 4,
     children: [
       new Text(titleProperty, {
-        font: "bold 14px sans-serif",
+        font: FONTS.panelTitle,
         fill: QubitSketchColors.textColorProperty,
       }),
       body,

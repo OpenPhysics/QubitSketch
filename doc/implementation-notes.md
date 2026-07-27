@@ -13,12 +13,15 @@ src/circuit-screen/model/
   ├─ QuantumSimulator.ts       pure math: simulate(), applyControlledGate(), computeBlochVectors()
   ├─ GateMatrices.ts           2×2 unitaries, rotationMatrix(axis, θ)
   ├─ GateType.ts               CircuitCell discriminated union, MAX_QUBITS, NUM_STEPS
+  ├─ CircuitGrid.ts            Grid type, bounds-safe reads, immutable edit, column classifier
   ├─ ColumnRules.ts            shared "does the simulator apply this column in full?" predicate
   ├─ QubitSketchModel.ts       grid, undo/redo, inspect step, DerivedProperty outputs
   ├─ CircuitSerializer.ts      compact URL hash encoding
   ├─ CircuitUrlSync.ts         #circuit=… load/save on hash change
-  ├─ QasmSerializer.ts           OpenQASM 2.0 teaching subset
-  └─ CircuitPresets.ts           example circuits
+  ├─ QasmSerializer.ts         OpenQASM 2.0 teaching subset — barrel over:
+  │    QasmExport.ts (circuit → QASM), QasmImport.ts (QASM → circuit),
+  │    QasmMappings.ts (gate-name maps), QasmAngle.ts (angle format/parse)
+  └─ CircuitPresets.ts         example circuits
 
 src/circuit-screen/view/
   ├─ CircuitScreenView.ts      palette + canvas + simulation panel + QASM dialog

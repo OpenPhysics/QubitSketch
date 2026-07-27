@@ -19,6 +19,7 @@ import { Node, Rectangle, Text } from "scenerystack/scenery";
 import { FlatAppearanceStrategy, RectangularPushButton } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import { basisRowFont, ketLabel } from "./displayUtils.js";
 
 const MAX_ROW_HEIGHT = 16;
@@ -53,7 +54,7 @@ export class MeasurementHistogramNode extends Node {
 
     const measureButton = new RectangularPushButton({
       content: new Text(labels.measureStringProperty, {
-        font: "13px sans-serif",
+        font: FONTS.body,
         fill: QubitSketchColors.onGateTextColorProperty,
       }),
       baseColor: QubitSketchColors.histogramBarColorProperty,
@@ -68,7 +69,7 @@ export class MeasurementHistogramNode extends Node {
 
     const clearButton = new RectangularPushButton({
       content: new Text(labels.clearShotsStringProperty, {
-        font: "13px sans-serif",
+        font: FONTS.body,
         fill: QubitSketchColors.onGateTextColorProperty,
       }),
       baseColor: QubitSketchColors.eraserColorProperty,
@@ -83,7 +84,7 @@ export class MeasurementHistogramNode extends Node {
     this.addChild(clearButton);
 
     const totalText = new Text("", {
-      font: "11px monospace",
+      font: FONTS.monoCaption,
       fill: QubitSketchColors.textColorProperty,
       left: clearButton.right + 12,
       centerY: measureButton.centerY,

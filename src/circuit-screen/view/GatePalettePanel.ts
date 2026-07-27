@@ -11,6 +11,7 @@ import type { Vector2 } from "scenerystack/dot";
 import { Circle, DragListener, Line, Node, Rectangle, Text } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { scaledFont } from "../../QubitSketchFonts.js";
 import type { Complex2x2 } from "../model/GateMatrices.js";
 import { GATE_MATRICES, rotationMatrix } from "../model/GateMatrices.js";
 import type { SelectedTool } from "../model/GateType.js";
@@ -265,7 +266,7 @@ function makeToolNode(tool: SelectedTool, size: number): Node {
     );
     node.addChild(
       new Text("✕", {
-        font: `bold ${Math.floor(size * 0.44)}px sans-serif`,
+        font: scaledFont(Math.floor(size * 0.44), { bold: true }),
         fill: QubitSketchColors.onGateTextColorProperty,
         centerX: size / 2,
         centerY: size / 2,

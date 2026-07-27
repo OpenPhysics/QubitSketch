@@ -6,6 +6,7 @@
  */
 import { Node, Rectangle, Text } from "scenerystack/scenery";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { scaledFont } from "../../QubitSketchFonts.js";
 import type { GateType, RotationAxis } from "../model/GateType.js";
 
 // Map gate type to its color property
@@ -47,7 +48,7 @@ const MULTI_CHAR_LABEL_SCALE = 0.3; // "S†", "√X", … must fit a wider glyp
 /** Bold monospace font sized to fit a 1- or multi-character glyph inside the gate box. */
 function labelFont(label: string, size: number): string {
   const scale = label.length <= 1 ? SINGLE_CHAR_LABEL_SCALE : MULTI_CHAR_LABEL_SCALE;
-  return `bold ${Math.floor(size * scale)}px monospace`;
+  return scaledFont(Math.floor(size * scale), { bold: true, mono: true });
 }
 
 export class GateNode extends Node {
@@ -123,7 +124,7 @@ export class RotationGateNode extends Node {
     const showAngle = theta !== undefined;
     this.addChild(
       new Text(rotationLabel(axis), {
-        font: `bold ${Math.floor(size * ROTATION_LABEL_SCALE)}px monospace`,
+        font: scaledFont(Math.floor(size * ROTATION_LABEL_SCALE), { bold: true, mono: true }),
         fill: QubitSketchColors.onGateTextColorProperty,
         centerX: size / 2,
         centerY: showAngle ? size * ROTATION_LABEL_CENTER_Y_WITH_ANGLE : size / 2,
@@ -134,7 +135,7 @@ export class RotationGateNode extends Node {
       const deg = Math.round((theta * HALF_TURN_DEGREES) / Math.PI);
       this.addChild(
         new Text(`${deg}°`, {
-          font: `${Math.floor(size * ROTATION_ANGLE_SCALE)}px sans-serif`,
+          font: scaledFont(Math.floor(size * ROTATION_ANGLE_SCALE)),
           fill: QubitSketchColors.onGateTextColorProperty,
           centerX: size / 2,
           centerY: size * ROTATION_ANGLE_CENTER_Y,

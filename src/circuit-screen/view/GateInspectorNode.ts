@@ -12,6 +12,7 @@ import { Text, VBox } from "scenerystack/scenery";
 import { HSlider, Panel } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 import { rotationLabel } from "./GateNode.js";
 
@@ -23,7 +24,7 @@ export class GateInspectorNode extends Panel {
     const angleStringProperty = StringManager.getInstance().getInspectorStrings().angleStringProperty;
 
     const titleText = new Text("", {
-      font: "bold 15px monospace",
+      font: FONTS.inspectorTitle,
       fill: QubitSketchColors.textColorProperty,
     });
 
@@ -32,7 +33,7 @@ export class GateInspectorNode extends Panel {
       (theta, label) => `${label}: ${Math.round((theta * 180) / Math.PI)}°`,
     );
     const valueText = new Text(valueStringProperty, {
-      font: "13px sans-serif",
+      font: FONTS.body,
       fill: QubitSketchColors.textColorProperty,
     });
 
@@ -49,7 +50,7 @@ export class GateInspectorNode extends Panel {
     // Ticks live in radians (slider range is 0..2π) but read as degrees.
     const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
     const tickLabel = (degrees: number) =>
-      new Text(`${degrees}°`, { font: "10px sans-serif", fill: QubitSketchColors.textColorProperty });
+      new Text(`${degrees}°`, { font: FONTS.tick, fill: QubitSketchColors.textColorProperty });
 
     // Major (labeled) ticks every 45°, minor ticks every 15° in between.
     for (let degrees = 0; degrees <= 360; degrees += 15) {

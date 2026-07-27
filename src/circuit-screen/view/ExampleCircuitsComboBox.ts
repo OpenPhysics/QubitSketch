@@ -14,6 +14,7 @@ import { HBox, type Node, Text } from "scenerystack/scenery";
 import { ComboBox, type ComboBoxItem } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import { CIRCUIT_PRESETS } from "../model/CircuitPresets.js";
 import type { QubitSketchModel } from "../model/QubitSketchModel.js";
 
@@ -23,7 +24,7 @@ export class ExampleCircuitsComboBox extends HBox {
   public constructor(model: QubitSketchModel, listParent: Node) {
     const strings = StringManager.getInstance().getExampleStrings();
     const itemText = (textProperty: ReadOnlyProperty<string>): Text =>
-      new Text(textProperty, { font: "14px sans-serif", fill: QubitSketchColors.textColorProperty });
+      new Text(textProperty, { font: FONTS.control, fill: QubitSketchColors.textColorProperty });
 
     // "" selects the placeholder. reentrant: true allows the listener below to reset the value.
     const selectedProperty = new Property<string>(PLACEHOLDER, { reentrant: true });
@@ -55,7 +56,7 @@ export class ExampleCircuitsComboBox extends HBox {
       align: "center",
       children: [
         new Text(strings.labelStringProperty, {
-          font: "bold 14px sans-serif",
+          font: FONTS.panelTitle,
           fill: QubitSketchColors.textColorProperty,
         }),
         comboBox,

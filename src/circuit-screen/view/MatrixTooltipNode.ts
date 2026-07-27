@@ -9,6 +9,7 @@ import type { ReadOnlyProperty } from "scenerystack/axon";
 import { Line, Node, Text, VBox } from "scenerystack/scenery";
 import { Panel } from "scenerystack/sun";
 import QubitSketchColors from "../../QubitSketchColors.js";
+import { FONTS } from "../../QubitSketchFonts.js";
 import type { Complex2x2 } from "../model/GateMatrices.js";
 import { formatComplex } from "./displayUtils.js";
 
@@ -25,7 +26,7 @@ export class MatrixTooltipNode extends Panel {
     }
     children.push(
       new Text(descriptionProperty, {
-        font: "12px sans-serif",
+        font: FONTS.caption,
         fill: QubitSketchColors.textColorProperty,
         maxWidth: 220,
       }),
@@ -52,7 +53,7 @@ function matrixNode(m: Complex2x2): Node {
     for (const [c, value] of row.entries()) {
       node.addChild(
         new Text(formatComplex(value), {
-          font: "12px monospace",
+          font: FONTS.monoBody,
           fill: QubitSketchColors.textColorProperty,
           centerX: gridLeft + c * CELL_WIDTH + CELL_WIDTH / 2,
           centerY: r * CELL_HEIGHT + CELL_HEIGHT / 2,

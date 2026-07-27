@@ -18,13 +18,14 @@ import type { Complex, Vector3 } from "scenerystack/dot";
 import { Range } from "scenerystack/dot";
 import type { TModel } from "scenerystack/joist";
 import type { QubitSketchPreferencesModel } from "../../preferences/QubitSketchPreferencesModel.js";
-import qubitSketchQueryParameters from "../../preferences/qubitSketchQueryParameters.js";
+import type { Grid } from "./CircuitGrid.js";
+import { cellAt, classifyColumn, columnHasControl, emptyGrid, withCell } from "./CircuitGrid.js";
 import { censusColumn, isApplicableColumn } from "./ColumnRules.js";
 import type { CircuitCell, GateType, SelectedTool } from "./GateType.js";
 import {
   cellsEqual,
+  DEFAULT_QUBITS,
   EMPTY_CELL,
-  isAnyControl,
   MAX_QUBITS,
   MIN_QUBITS,
   NUM_STEPS,
@@ -36,16 +37,14 @@ import { computeBlochVectors, simulate } from "./QuantumSimulator.js";
 export type GridPosition = { readonly qubit: number; readonly step: number };
 
 /** A point-in-time circuit state for undo/redo. The grid is immutable, so this is a cheap reference. */
-type CircuitSnapshot = { readonly circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>; readonly qubitCount: number };
+type CircuitSnapshot = { readonly circuit: Grid; readonly qubitCount: number };
 
 export class QubitSketchModel implements TModel {
-  private readonly _qubitCountProperty = new NumberProperty(qubitSketchQueryParameters.qubits, {
-    range: new Range(MIN_QUBITS, MAX_QUBITS),
-    numberType: "Integer",
-  });
+  /** Backing store for the qubit count; its initial value is injected via the constructor. */
+  private readonly _qubitCountProperty: NumberProperty;
 
   /** Number of visible qubit wires (1–MAX_QUBITS). Mutate via setQubitCount/loadCircuit/reset. */
-  public readonly qubitCountProperty: ReadOnlyProperty<number> = this._qubitCountProperty;
+  public readonly qubitCountProperty: ReadOnlyProperty<number>;
 
   public readonly selectedToolProperty: Property<SelectedTool> = new Property<SelectedTool>("H");
 
@@ -58,13 +57,14 @@ export class QubitSketchModel implements TModel {
    * off and the displays show the final state. This is transient view state — it is deliberately
    * excluded from undo/redo and from the URL hash.
    */
-  public readonly inspectStepProperty: Property<number | null> = new Property<number | null>(null);
+  private readonly _inspectStepProperty = new Property<number | null>(null);
+  public readonly inspectStepProperty: ReadOnlyProperty<number | null> = this._inspectStepProperty;
 
   /** Backing store for the circuit grid; mutated only through this model's methods. */
-  private readonly _circuitProperty: Property<ReadonlyArray<ReadonlyArray<CircuitCell>>>;
+  private readonly _circuitProperty: Property<Grid>;
 
   /** circuit[qubitIndex][stepIndex] — read-only; mutate via placeCell/loadCircuit/undo/redo/etc. */
-  public readonly circuitProperty: ReadOnlyProperty<ReadonlyArray<ReadonlyArray<CircuitCell>>>;
+  public readonly circuitProperty: ReadOnlyProperty<Grid>;
 
   /** Live statevector — recomputed whenever the circuit or qubit count changes. */
   public readonly stateVectorProperty: ReadOnlyProperty<Complex[]>;
@@ -96,10 +96,15 @@ export class QubitSketchModel implements TModel {
 
   public constructor(preferences?: QubitSketchPreferencesModel) {
     this.preferences = preferences;
-    if (preferences) {
-      this._qubitCountProperty.value = preferences.qubitCountProperty.value;
-    }
-    this._circuitProperty = new Property<ReadonlyArray<ReadonlyArray<CircuitCell>>>(QubitSketchModel.emptyCircuit());
+    // The initial qubit count comes from the injected preferences model (whose own initial value
+    // derives from the ?qubits= query parameter), or the plain default when constructed without one.
+    this._qubitCountProperty = new NumberProperty(preferences?.qubitCountProperty.value ?? DEFAULT_QUBITS, {
+      range: new Range(MIN_QUBITS, MAX_QUBITS),
+      numberType: "Integer",
+    });
+    this.qubitCountProperty = this._qubitCountProperty;
+
+    this._circuitProperty = new Property<Grid>(emptyGrid());
     this.circuitProperty = this._circuitProperty;
 
     this.stateVectorProperty = new DerivedProperty(
@@ -122,7 +127,7 @@ export class QubitSketchModel implements TModel {
       let depth = 0;
       for (let q = 0; q < n; q++) {
         for (let s = NUM_STEPS - 1; s >= depth; s--) {
-          if ((circuit[q]?.[s] ?? EMPTY_CELL).kind !== "empty") {
+          if (cellAt(circuit, q, s).kind !== "empty") {
             depth = s + 1;
             break;
           }
@@ -140,33 +145,29 @@ export class QubitSketchModel implements TModel {
     });
   }
 
-  private static emptyCircuit(): ReadonlyArray<ReadonlyArray<CircuitCell>> {
-    return Array.from({ length: MAX_QUBITS }, () => Array.from({ length: NUM_STEPS }, (): CircuitCell => EMPTY_CELL));
-  }
-
   /** Rounds and clamps a requested qubit count into the supported [MIN_QUBITS, MAX_QUBITS] range. */
   private static clampQubitCount(count: number): number {
     return Math.max(MIN_QUBITS, Math.min(MAX_QUBITS, Math.round(count)));
   }
 
   /**
-   * True if any VISIBLE cell in the given step (column) is a control of either polarity (• or ◦).
-   * Hidden rows (q ≥ qubitCount) are excluded to match the simulator, which ignores them.
+   * True if any VISIBLE cell in the given step (column) other than `exceptQubit` is a control of
+   * either polarity (• or ◦). Hidden rows (q ≥ qubitCount) are excluded to match the simulator,
+   * which ignores them.
    *
    * Used only to pick between the `gate` and `controlledTarget` cell kinds, which is purely
    * cosmetic (both are gate-bearing, and CircuitCanvas renders them identically) — so this
    * deliberately reflects what is controlled at the CURRENT wire count. Legality is a separate,
    * grid-wide question; see {@link wouldRemainApplicable}.
    */
-  private columnHasControl(stepIndex: number, exceptQubit: number): boolean {
-    const circuit = this.circuitProperty.value;
-    const n = this.qubitCountProperty.value;
-    for (let q = 0; q < n; q++) {
-      if (q !== exceptQubit && isAnyControl(circuit[q]?.[stepIndex] ?? EMPTY_CELL)) {
-        return true;
-      }
-    }
-    return false;
+  private columnHasControlExcept(stepIndex: number, exceptQubit: number): boolean {
+    const shape = classifyColumn(this.circuitProperty.value, stepIndex, this.qubitCountProperty.value);
+    const without = (wires: number[]): number[] => wires.filter((q) => q !== exceptQubit);
+    return columnHasControl({
+      ...shape,
+      onControls: without(shape.onControls),
+      offControls: without(shape.offControls),
+    });
   }
 
   /**
@@ -182,7 +183,7 @@ export class QubitSketchModel implements TModel {
     const circuit = this.circuitProperty.value;
     const column: CircuitCell[] = [];
     for (let q = 0; q < MAX_QUBITS; q++) {
-      column.push(q === qubitIndex ? cell : (circuit[q]?.[stepIndex] ?? EMPTY_CELL));
+      column.push(q === qubitIndex ? cell : cellAt(circuit, q, stepIndex));
     }
     return isApplicableColumn(censusColumn(column));
   }
@@ -236,7 +237,7 @@ export class QubitSketchModel implements TModel {
     if ((current.kind === "gate" || current.kind === "controlledTarget") && current.gate === gate) {
       return EMPTY_CELL;
     }
-    const placed: CircuitCell = this.columnHasControl(stepIndex, qubitIndex)
+    const placed: CircuitCell = this.columnHasControlExcept(stepIndex, qubitIndex)
       ? { kind: "controlledTarget", gate }
       : { kind: "gate", gate };
     return this.wouldRemainApplicable(qubitIndex, stepIndex, placed) ? placed : null;
@@ -247,7 +248,7 @@ export class QubitSketchModel implements TModel {
    * for the per-tool placement and refusal rules).
    */
   public placeCell(qubitIndex: number, stepIndex: number): void {
-    const current = this.circuitProperty.value[qubitIndex]?.[stepIndex] ?? EMPTY_CELL;
+    const current = cellAt(this.circuitProperty.value, qubitIndex, stepIndex);
     const next = this.nextCellForTool(this.selectedToolProperty.value, current, qubitIndex, stepIndex);
 
     // A refused placement or a click that changes nothing (e.g. the eraser on an empty cell)
@@ -256,7 +257,7 @@ export class QubitSketchModel implements TModel {
       return;
     }
     // Editing the circuit leaves step-through inspect mode so the displays stay authoritative.
-    this.inspectStepProperty.value = null;
+    this._inspectStepProperty.value = null;
     this.pushHistory();
     this.setCell(qubitIndex, stepIndex, next);
     // Auto-select a freshly placed rotation gate so its angle inspector opens; otherwise deselect.
@@ -265,8 +266,8 @@ export class QubitSketchModel implements TModel {
 
   /** Updates the rotation angle (radians) of a parametrized gate at the given position. */
   public setCellTheta(qubitIndex: number, stepIndex: number, theta: number): void {
-    const current = this.circuitProperty.value[qubitIndex]?.[stepIndex];
-    if (current?.kind !== "paramGate" || current.theta === theta) {
+    const current = cellAt(this.circuitProperty.value, qubitIndex, stepIndex);
+    if (current.kind !== "paramGate" || current.theta === theta) {
       return;
     }
     // Coalesce a continuous slider drag on one cell into a single undo step.
@@ -280,25 +281,30 @@ export class QubitSketchModel implements TModel {
     if (clamped === this.qubitCountProperty.value) {
       return;
     }
-    this.inspectStepProperty.value = null;
+    this._inspectStepProperty.value = null;
     this.pushHistory();
     this._qubitCountProperty.value = clamped;
   }
 
+  /**
+   * Sets the step-through inspect cursor: `null` for the live/final state, or a column count
+   * clamped into [0, NUM_STEPS]. This is transient view state, so it records no undo history.
+   */
+  public setInspectStep(step: number | null): void {
+    this._inspectStepProperty.value = step === null ? null : Math.max(0, Math.min(NUM_STEPS, Math.round(step)));
+  }
+
   /** Writes a single cell, replacing the grid immutably. Low-level — does not record history. */
   private setCell(qubitIndex: number, stepIndex: number, cell: CircuitCell): void {
-    const updated = this.circuitProperty.value.map((row, q) =>
-      q === qubitIndex ? row.map((c, s) => (s === stepIndex ? cell : c)) : row,
-    );
-    this._circuitProperty.set(updated);
+    this._circuitProperty.set(withCell(this.circuitProperty.value, qubitIndex, stepIndex, cell));
   }
 
   /**
    * Replaces both the grid and qubit count as a single undoable action (used by QASM import and
    * example presets). Leaves step-through inspect mode and clears any rotation selection.
    */
-  public loadCircuit(grid: ReadonlyArray<ReadonlyArray<CircuitCell>>, qubitCount: number): void {
-    this.inspectStepProperty.value = null;
+  public loadCircuit(grid: Grid, qubitCount: number): void {
+    this._inspectStepProperty.value = null;
     this.selectedCellProperty.value = null;
     this.pushHistory();
     this._qubitCountProperty.value = QubitSketchModel.clampQubitCount(qubitCount);
@@ -310,7 +316,7 @@ export class QubitSketchModel implements TModel {
    * startup, where the loaded state is the baseline rather than an undoable edit. For an undoable
    * load (QASM import, example presets) use {@link loadCircuit} instead.
    */
-  public restoreCircuit(grid: ReadonlyArray<ReadonlyArray<CircuitCell>>, qubitCount: number): void {
+  public restoreCircuit(grid: Grid, qubitCount: number): void {
     this._qubitCountProperty.value = QubitSketchModel.clampQubitCount(qubitCount);
     this._circuitProperty.set(grid);
   }
@@ -393,8 +399,8 @@ export class QubitSketchModel implements TModel {
     }
     this.selectedToolProperty.reset();
     this.selectedCellProperty.reset();
-    this.inspectStepProperty.reset();
-    this._circuitProperty.set(QubitSketchModel.emptyCircuit());
+    this._inspectStepProperty.reset();
+    this._circuitProperty.set(emptyGrid());
     this.applyingHistory = false;
     this.clearHistory();
   }
