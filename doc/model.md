@@ -79,9 +79,12 @@ circuit or undo history.
 - **Ideal, noiseless** unitary gates; no decoherence, gate error, or readout error.
 - **Pure-state CPU statevector** — exact but exponential in n; capped at **5 qubits** (32 amplitudes).
 - **Global phase** is unobservable and not emphasized in the UI.
-- **One controlled target per column** when controls are present. The editor refuses placements that
-  would create a cell the simulator ignores, so every column is one of three shapes: independent
-  single-qubit gates, a single controlled operation, or a single SWAP pair.
+- **One controlled target per column** when controls are present. Every column is one of three shapes:
+  independent single-qubit gates, a single controlled operation, or a single SWAP pair. This is enforced
+  everywhere a circuit can come from — the editor refuses such placements (including ones that would
+  only misbehave later, once a hidden wire is shown again), and a shared `#circuit=` link or QASM
+  program describing an unsupported column is rejected rather than loaded. So a gate you can see is
+  always a gate that acts.
 - OpenQASM import/export covers a **teaching subset** (see QASM dialog); not full OpenQASM 3.
 
 ## References

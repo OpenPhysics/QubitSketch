@@ -141,4 +141,61 @@ describe("QasmSerializer", () => {
     expect(qasmToCircuit(`${QASM_HEADER}qreg q[2];\nqreg r[2];\n`)).toBeNull();
     expect(qasmToCircuit(`${QASM_HEADER}qreg q[9];\n`)).toBeNull();
   });
+
+  describe("angle parsing", () => {
+    /** Parses a one-gate program and returns the theta it produced (null if rejected). */
+    function theta(angle: string): number | null {
+      const back = qasmToCircuit(`${QASM_HEADER}qreg q[1];\nrx(${angle}) q[0];\n`);
+      const cell = back?.circuit[0]?.[0];
+      return cell?.kind === "paramGate" ? cell.theta : null;
+    }
+
+    it("reads scientific notation instead of splitting it on the exponent sign", () => {
+      // Regression: the tokenizer had no exponent branch, so "1e-3" became 1 − 3 = −2.
+      expect(theta("1e-3")).toBeCloseTo(0.001, 12);
+      expect(theta("2.5e2")).toBeCloseTo(250, 12);
+      expect(theta("1E-3")).toBeCloseTo(0.001, 12);
+      expect(theta("1e+2")).toBeCloseTo(100, 12);
+      expect(theta("-1.5e-2")).toBeCloseTo(-0.015, 12);
+    });
+
+    it("still evaluates plain and pi-based expressions", () => {
+      expect(theta("0")).toBe(0);
+      expect(theta("1.25")).toBeCloseTo(1.25, 12);
+      expect(theta(".5")).toBeCloseTo(0.5, 12);
+      expect(theta("pi/2")).toBeCloseTo(Math.PI / 2, 12);
+      expect(theta("2*pi")).toBeCloseTo(2 * Math.PI, 12);
+      expect(theta("-(pi/4)")).toBeCloseTo(-Math.PI / 4, 12);
+      expect(theta("1+2*3")).toBeCloseTo(7, 12);
+      expect(theta("pi / 2")).toBeCloseTo(Math.PI / 2, 12); // whitespace tolerated
+    });
+
+    it("handles nested parentheses in the angle expression", () => {
+      // Regression: the statement splitter used /\(([^)]*)\)/, which stopped at the first ")" and
+      // left parseAngle's parenthesis support unreachable.
+      expect(theta("-(pi/4)")).toBeCloseTo(-Math.PI / 4, 12);
+      expect(theta("(pi+2)/2")).toBeCloseTo((Math.PI + 2) / 2, 12);
+      expect(theta("((1))")).toBeCloseTo(1, 12);
+      expect(theta("2*(pi/(2*2))")).toBeCloseTo(Math.PI / 2, 12);
+    });
+
+    it("rejects unbalanced parentheses in a statement", () => {
+      expect(qasmToCircuit(`${QASM_HEADER}qreg q[1];\nrx((pi/2 q[0];\n`)).toBeNull();
+    });
+
+    it("rejects garbage rather than silently dropping it", () => {
+      // Unrecognized characters used to be discarded by the tokenizer, so "2x" parsed as 2.
+      expect(theta("2x")).toBeNull();
+      expect(theta("1e")).toBeNull();
+      expect(theta("pi/")).toBeNull();
+      expect(theta("(pi")).toBeNull();
+      expect(theta("$")).toBeNull();
+      expect(theta("")).toBeNull();
+    });
+
+    it("rejects angles that would put NaN into the statevector", () => {
+      expect(theta("1e999")).toBeNull(); // overflows to Infinity
+      expect(theta("pi/0")).toBeNull(); // divides to Infinity
+    });
+  });
 });

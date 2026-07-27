@@ -9,8 +9,9 @@
  */
 import type { MutableGrid } from "./CircuitGrid.js";
 import { emptyGrid } from "./CircuitGrid.js";
+import { isApplicableCircuit } from "./ColumnRules.js";
 import type { CircuitCell, GateType, RotationAxis } from "./GateType.js";
-import { MAX_QUBITS, MIN_QUBITS, NUM_STEPS } from "./GateType.js";
+import { isAnyControl, MAX_QUBITS, MIN_QUBITS, NUM_STEPS } from "./GateType.js";
 import { parseAngle } from "./QasmAngle.js";
 import { GATE_TO_QASM, SINGLE_CONTROL_QASM } from "./QasmMappings.js";
 
@@ -60,7 +61,10 @@ type ParsedOp = {
 /** Reserves the inclusive span across the involved wires (so the column's semantics stay intact). */
 function spanOp(placements: Array<{ wire: number; cell: CircuitCell }>): ParsedOp {
   const wires = placements.map((p) => p.wire);
-  const exclusive = placements.some((p) => p.cell.kind === "control" || p.cell.kind === "swap");
+  // isAnyControl rather than a `kind === "control"` test: an anti-control column is just as
+  // exclusive, and this stays correct if import ever emits ◦ cells directly instead of
+  // x-conjugating them.
+  const exclusive = placements.some((p) => isAnyControl(p.cell) || p.cell.kind === "swap");
   return { placements, spanLo: Math.min(...wires), spanHi: Math.max(...wires), exclusive };
 }
 
@@ -133,6 +137,47 @@ function parseGateStatement(name: string, param: string | undefined, operands: n
   return parseSingleQubitStatement(name, param, operands) ?? parseMultiQubitStatement(name, param, operands);
 }
 
+/**
+ * Splits a statement into its gate name, optional parenthesized parameter text, and operand text.
+ *
+ * The parameter list is scanned with paren-depth tracking rather than a `\(([^)]*)\)` regex, which
+ * would stop at the first `)` and mangle a nested expression like `rx(-(pi/4))` into the parameter
+ * `-(pi/4` plus the operands `) q[0]` — rejecting a valid program and leaving parseAngle's support
+ * for parentheses unreachable. Returns null if the name is missing or the parens are unbalanced.
+ */
+function splitStatement(stmt: string): { name: string; param: string | undefined; rest: string } | null {
+  const nameMatch = stmt.match(/^([A-Za-z_]\w*)\s*/);
+  const name = nameMatch?.[1];
+  if (nameMatch === undefined || nameMatch === null || name === undefined) {
+    return null;
+  }
+  let pos = nameMatch[0].length;
+  let param: string | undefined;
+
+  if (stmt.charAt(pos) === "(") {
+    const start = pos + 1;
+    let depth = 0;
+    for (; pos < stmt.length; pos++) {
+      const ch = stmt.charAt(pos);
+      if (ch === "(") {
+        depth++;
+      } else if (ch === ")") {
+        depth--;
+        if (depth === 0) {
+          break;
+        }
+      }
+    }
+    if (depth !== 0) {
+      return null;
+    }
+    param = stmt.slice(start, pos);
+    pos++; // consume the matching ")"
+  }
+
+  return { name: name.toLowerCase(), param, rest: stmt.slice(pos).trim() };
+}
+
 /** Parses the size out of a `qreg name[N]` declaration body, or null if malformed. */
 function parseQregSize(rest: string): number | null {
   const reg = rest.match(/^[A-Za-z_]\w*\s*\[\s*(\d+)\s*\]$/);
@@ -156,13 +201,11 @@ export function qasmToCircuit(qasm: string): { circuit: CircuitCell[][]; qubitCo
   const ops: ParsedOp[] = [];
 
   for (const stmt of statements) {
-    const m = stmt.match(/^([A-Za-z_]\w*)\s*(?:\(([^)]*)\))?\s*([\s\S]*)$/);
-    if (m === null) {
+    const split = splitStatement(stmt);
+    if (split === null) {
       return null;
     }
-    const name = (m[1] ?? "").toLowerCase();
-    const param = m[2];
-    const rest = (m[3] ?? "").trim();
+    const { name, param, rest } = split;
 
     if (name === "qreg") {
       // Multiple quantum registers are unsupported.
@@ -234,5 +277,9 @@ function packOpsIntoColumns(ops: readonly ParsedOp[]): MutableGrid | null {
       nextFree[w] = col + 1;
     }
   }
-  return circuit;
+  // Safety net: the greedy packer above is meant to produce only applicable columns, but it
+  // reasons about spans and column state rather than checking the result. Verifying against the
+  // shared predicate means a packing bug rejects the import instead of loading a circuit whose
+  // gates the simulator would partly ignore.
+  return isApplicableCircuit(circuit) ? circuit : null;
 }

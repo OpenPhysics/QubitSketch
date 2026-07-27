@@ -13,11 +13,15 @@ src/circuit-screen/model/
   ├─ QuantumSimulator.ts       pure math: simulate(), applyControlledGate(), computeBlochVectors()
   ├─ GateMatrices.ts           2×2 unitaries, rotationMatrix(axis, θ)
   ├─ GateType.ts               CircuitCell discriminated union, MAX_QUBITS, NUM_STEPS
+  ├─ CircuitGrid.ts            Grid type, bounds-safe reads, immutable edit, column classifier
+  ├─ ColumnRules.ts            shared "does the simulator apply this column in full?" predicate
   ├─ QubitSketchModel.ts       grid, undo/redo, inspect step, DerivedProperty outputs
   ├─ CircuitSerializer.ts      compact URL hash encoding
   ├─ CircuitUrlSync.ts         #circuit=… load/save on hash change
-  ├─ QasmSerializer.ts           OpenQASM 2.0 teaching subset
-  └─ CircuitPresets.ts           example circuits
+  ├─ QasmSerializer.ts         OpenQASM 2.0 teaching subset — barrel over:
+  │    QasmExport.ts (circuit → QASM), QasmImport.ts (QASM → circuit),
+  │    QasmMappings.ts (gate-name maps), QasmAngle.ts (angle format/parse)
+  └─ CircuitPresets.ts         example circuits
 
 src/circuit-screen/view/
   ├─ CircuitScreenView.ts      palette + canvas + simulation panel + QASM dialog
@@ -48,6 +52,16 @@ Data flows Model → View through AXON `Property` objects; `QuantumSimulator` im
   circuit clears inspect back to live final state.
 - **Column semantics in one place.** `applyColumn()` in `QuantumSimulator.ts` is the single authority
   for control/SWAP/single-qubit rules — keep tests and docs aligned with it.
+- **One legality predicate, three writers.** `ColumnRules.ts` answers "does the simulator apply this
+  column in full?", and every path that can write a grid checks it: the placement guards, the URL
+  deserializer, and the QASM column packer. A grid that fails it would render gates that never act,
+  so `deserialize`/`qasmToCircuit` reject rather than load one. When changing `applyColumn`'s
+  supported shapes, change `isApplicableColumn` in the same commit.
+- **Legality is grid-wide, not visible-only.** The guards scan all `MAX_QUBITS` rows even though the
+  simulator only reads the visible ones. A cell parked on a hidden wire re-enters the simulation when
+  the user grows the wire count, so a column that is legal only while part of it is hidden would then
+  drop a gate. (Choosing `gate` vs `controlledTarget` is separate and *does* use the visible rows —
+  it is cosmetic, since `CircuitCanvas` renders both identically.)
 - **URL sharing.** `CircuitUrlSync` serializes the grid to `#circuit=…`; `restoreCircuit()` loads at
   startup without pushing undo history.
 

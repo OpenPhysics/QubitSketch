@@ -11,9 +11,20 @@ export function formatAngle(theta: number): string {
   return String(Math.round(theta * 1e6) / 1e6);
 }
 
+/**
+ * Matches one token: a number (with an optional exponent), `pi`, an operator/paren, or — via the
+ * trailing `.` catch-all — any single unrecognized character.
+ *
+ * The exponent branch and the catch-all both matter. Without the exponent, `1e-3` tokenizes as
+ * `1`, `-`, `3` and evaluates to −2; without the catch-all, unrecognized characters are dropped
+ * silently instead of failing the parse. Both are silent-wrong-answer bugs, so every character of
+ * the input has to land in exactly one token and be accounted for by the caller's `pos` check.
+ */
+const ANGLE_TOKEN = /(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?|pi|[()+\-*/]|./g;
+
 /** Evaluates a rotation-angle expression over numbers, `pi`, and + − × ÷ with parentheses. */
 export function parseAngle(expr: string): number | null {
-  const matched = expr.toLowerCase().match(/(\d+\.?\d*|\.\d+|pi|[()+\-*/])/g);
+  const matched = expr.toLowerCase().replace(/\s+/g, "").match(ANGLE_TOKEN);
   if (matched === null) {
     return null;
   }
@@ -78,8 +89,11 @@ export function parseAngle(expr: string): number | null {
       pos++;
       return Math.PI;
     }
+    // An unrecognized character (matched by ANGLE_TOKEN's catch-all) parses to NaN and rejects the
+    // program. Non-finite values are rejected too: an absurd exponent like 1e999 would otherwise
+    // reach rotationMatrix and poison every amplitude with NaN.
     const num = Number.parseFloat(tok);
-    if (Number.isNaN(num)) {
+    if (!Number.isFinite(num)) {
       return null;
     }
     pos++;
@@ -87,5 +101,10 @@ export function parseAngle(expr: string): number | null {
   }
 
   const result = parseExpr();
-  return result === null || pos !== tokens.length ? null : result;
+  // `pos !== tokens.length` means trailing junk the grammar could not consume. The finiteness
+  // check also catches an expression that overflows or divides by zero (e.g. "pi/0").
+  if (result === null || pos !== tokens.length || !Number.isFinite(result)) {
+    return null;
+  }
+  return result;
 }

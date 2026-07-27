@@ -13,7 +13,7 @@ Physics for educators: `doc/model.md`. Architecture: `doc/implementation-notes.m
 | Area | Location |
 |---|---|
 | Screen | `src/circuit-screen/CircuitScreen.ts` |
-| Model | `model/QubitSketchModel.ts`, `QuantumSimulator.ts` (pure engine), `GateType.ts`, `GateMatrices.ts`, `CircuitSerializer.ts`, `CircuitUrlSync.ts`, `QasmSerializer.ts` |
+| Model | `model/QubitSketchModel.ts`, `QuantumSimulator.ts` (pure engine), `GateType.ts`, `GateMatrices.ts`, `CircuitGrid.ts`, `ColumnRules.ts`, `CircuitSerializer.ts`, `CircuitUrlSync.ts`, `QasmSerializer.ts` (barrel over `QasmExport/Import/Mappings/Angle.ts`) |
 | View | `view/CircuitScreenView.ts`, `CircuitCanvas.ts`, `GatePalettePanel.ts`, `BlochSpheresNode.ts`, `CircuitScreenSummaryContent.ts` |
 | Constants / colors | `src/QubitSketchConstants.ts`, `QubitSketchColors.ts`, `src/i18n/StringManager.ts` |
 
@@ -36,6 +36,7 @@ Physics for educators: `doc/model.md`. Architecture: `doc/implementation-notes.m
 
 - **Endianness:** qubit 0 = LSB; basis index `i` has bit `q` set iff `(i >> q) & 1`. Kets display big-endian `|q_{n-1}…q_0⟩`.
 - Gates apply column-by-column; multiple controls in one column → Toffoli (CCX). **No controlled-SWAP (Fredkin).**
+- **Legal column shapes live in `ColumnRules.ts`** (`isApplicableColumn`), checked by the placement guards, `CircuitSerializer.deserialize`, and the QASM packer. Guards scan **all** `MAX_QUBITS` rows, not just visible ones, so hiding a wire cannot smuggle in a column whose gates get dropped later. Change it in the same commit as `applyColumn`.
 - **Measure** samples histogram from \|αₖ\|² but does **not** collapse mid-circuit state.
 - CPU-only statevector (no WebGL sim); no density matrix.
 
@@ -64,8 +65,10 @@ Fleet-standard Vitest layout:
 Actual specs:
 
 - `tests/quantum-simulator.test.ts` — physics engine (gates, controls, SWAP, Bloch vectors, inspect prefix)
-- `tests/serializers.test.ts` — URL + QASM round-trips, import column packing, malformed-input tolerance
+- `tests/serializers.test.ts` — URL + QASM round-trips, import column packing, malformed-input tolerance, angle-expression parsing (scientific notation, nested parens, garbage rejection)
 - `tests/qubit-sketch-model.test.ts` — placement guards (column shapes), undo/redo history
+- `tests/column-rules.test.ts` — the shared legality predicate + all three writers; includes a 4000-edit editor fuzz asserting the invariant holds over the whole grid after every reachable edit
+- `tests/display-utils.test.ts` — amplitude/phase formatting (consistent U+2212 minus, no negative zero)
 - `tests/memory-leak.test.ts` (covers `GatePalettePanel.dispose()` — palette drag previews and tooltips link global color Properties)
 - Shared grid/cell builders live in `tests/helpers.ts`
 

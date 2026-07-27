@@ -12,8 +12,11 @@
  *   "p<AXIS><θ>" parametrized rotation (e.g. "pX1.5708")
  *
  * `deserialize` is deliberately tolerant: any malformed input yields null rather
- * than throwing, so a bad URL just falls back to an empty circuit.
+ * than throwing, so a bad URL just falls back to an empty circuit. "Malformed"
+ * includes a payload whose columns are not shapes the simulator applies in full —
+ * see the note on {@link deserialize}.
  */
+import { isApplicableCircuit } from "./ColumnRules.js";
 import type { CircuitCell, GateType, RotationAxis } from "./GateType.js";
 import { EMPTY_CELL, GateType as GateTypeValues, MAX_QUBITS, MIN_QUBITS, NUM_STEPS } from "./GateType.js";
 
@@ -81,7 +84,15 @@ export function serialize(circuit: ReadonlyArray<ReadonlyArray<CircuitCell>>, qu
   return JSON.stringify({ v: FORMAT_VERSION, q: qubitCount, c: rows });
 }
 
-/** Parses a string produced by {@link serialize}; returns null on any malformed input. */
+/**
+ * Parses a string produced by {@link serialize}; returns null on any malformed input.
+ *
+ * Unlike the interactive editor, a `#circuit=` hash is arbitrary text — it can be hand-edited,
+ * truncated, or produced by an older build. So the parsed grid is checked against the same
+ * column rules the placement guards enforce, and a grid the simulator would only apply in part
+ * is rejected outright rather than loaded. Loading it would render gates that never act, which
+ * is worse than falling back to an empty circuit.
+ */
 export function deserialize(text: string): { circuit: CircuitCell[][]; qubitCount: number } | null {
   let obj: unknown;
   try {
@@ -110,6 +121,10 @@ export function deserialize(text: string): { circuit: CircuitCell[][]; qubitCoun
       row.push(parseToken(tokens[s] ?? ".") ?? EMPTY_CELL);
     }
     circuit.push(row);
+  }
+
+  if (!isApplicableCircuit(circuit)) {
+    return null;
   }
 
   return { circuit, qubitCount };
