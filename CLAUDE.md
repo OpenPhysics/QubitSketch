@@ -4,7 +4,7 @@ Sim-specific context for AI assistants. General SceneryStack guidance: [OpenPhys
 
 ## Project
 
-Drag-and-drop **quantum circuit builder** with live CPU statevector simulation (≤ 5 qubits). Pedagogical reimplementation of [Quirk](https://github.com/Strilanc/Quirk)'s core — superposition, entanglement, and unitary gates on a grid of qubit wires.
+Drag-and-drop **quantum circuit builder** with live CPU statevector simulation (≤ 5 qubits). Pedagogical reimplementation of [Quirk](https://github.com/Strilanc/Quirk)'s core (local checkout: `../Baseline/Qubit/Quirk`) — superposition, entanglement, and unitary gates on a grid of qubit wires.
 
 Physics for educators: `doc/model.md`. Architecture: `doc/implementation-notes.md`.
 
