@@ -90,5 +90,5 @@ depth-first disposes children so global color Properties are not retained. Scree
 
 ## Multi-screen simulations
 
-Single-screen sim. The legacy `Quirk/` folder is upstream reference material, not part of the shipped
+Single-screen sim. Upstream Quirk lives at `../Baseline/Qubit/Quirk` (OpenPhysics/Baseline), not part of the shipped
 build.

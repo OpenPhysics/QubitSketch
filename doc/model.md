@@ -91,6 +91,6 @@ circuit or undo history.
 
 - M. A. Nielsen & I. L. Chuang, *Quantum Computation and Quantum Information*, Ch. 1–2 (qubits,
   gates, measurement, entanglement).
-- Craig Gidney, *Quirk* quantum circuit simulator (design inspiration; `Quirk/` in repo is reference
+- Craig Gidney, *Quirk* quantum circuit simulator (design inspiration; local checkout: `../Baseline/Qubit/Quirk`
   only).
 - Standard gate definitions: Pauli X/Y/Z, Hadamard, phase gates, Rx(θ) = exp(−iθX/2), etc.
