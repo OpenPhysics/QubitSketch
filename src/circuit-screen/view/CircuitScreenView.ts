@@ -9,10 +9,10 @@
  *   - Qubit count row    — above the circuit (+ / − buttons + count display)
  *   - Reset All button   — bottom-right corner (PhET convention)
  */
+import { type EmptySelfOptions, optionize } from "scenerystack/phet-core";
 import { Node, Rectangle, Text } from "scenerystack/scenery";
 import { ResetAllButton } from "scenerystack/scenery-phet";
-import type { ScreenViewOptions } from "scenerystack/sim";
-import { ScreenView } from "scenerystack/sim";
+import { ScreenView, type ScreenViewOptions } from "scenerystack/sim";
 import { FlatAppearanceStrategy, RectangularPushButton } from "scenerystack/sun";
 import { FLAT_RESET_ALL_BUTTON_OPTIONS } from "../../common/QubitSketchButtonOptions.js";
 import { StringManager } from "../../i18n/StringManager.js";
@@ -31,9 +31,17 @@ import { QubitCountControl } from "./QubitCountControl.js";
 import { SimulationPanel } from "./SimulationPanel.js";
 import { attachUndoRedoKeyboardShortcuts } from "./undoRedoKeyboardShortcuts.js";
 
+export type CircuitScreenViewOptions = ScreenViewOptions;
+
 export class CircuitScreenView extends ScreenView {
-  public constructor(model: QubitSketchModel, options?: ScreenViewOptions) {
-    super({ ...options, screenSummaryContent: new CircuitScreenSummaryContent(model) });
+  public constructor(model: QubitSketchModel, providedOptions?: CircuitScreenViewOptions) {
+    const options = optionize<CircuitScreenViewOptions, EmptySelfOptions, ScreenViewOptions>()(
+      {
+        screenSummaryContent: new CircuitScreenSummaryContent(model),
+      },
+      providedOptions,
+    );
+    super(options);
 
     // ── Background ────────────────────────────────────────────────────────────
     const background = new Rectangle(0, 0, this.layoutBounds.width, this.layoutBounds.height, {

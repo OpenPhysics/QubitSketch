@@ -25,21 +25,26 @@
  *   const panel = new QubitSketchPanel(content, { fill: "transparent" });
  */
 
+import { type EmptySelfOptions, optionize } from "scenerystack/phet-core";
 import type { Node } from "scenerystack/scenery";
-import type { PanelOptions } from "scenerystack/sun";
-import { Panel } from "scenerystack/sun";
+import { Panel, type PanelOptions } from "scenerystack/sun";
 import QubitSketchColors from "../QubitSketchColors.js";
 import { PANEL_CORNER_RADIUS } from "../QubitSketchConstants.js";
 
+export type QubitSketchPanelOptions = PanelOptions;
+
 export class QubitSketchPanel extends Panel {
-  public constructor(content: Node, providedOptions?: PanelOptions) {
-    super(content, {
-      fill: QubitSketchColors.panelBackgroundColorProperty,
-      stroke: QubitSketchColors.panelBorderColorProperty,
-      cornerRadius: PANEL_CORNER_RADIUS,
-      xMargin: 12,
-      yMargin: 10,
-      ...providedOptions,
-    });
+  public constructor(content: Node, providedOptions?: QubitSketchPanelOptions) {
+    const options = optionize<QubitSketchPanelOptions, EmptySelfOptions, PanelOptions>()(
+      {
+        fill: QubitSketchColors.panelBackgroundColorProperty,
+        stroke: QubitSketchColors.panelBorderColorProperty,
+        cornerRadius: PANEL_CORNER_RADIUS,
+        xMargin: 12,
+        yMargin: 10,
+      },
+      providedOptions,
+    );
+    super(content, options);
   }
 }
