@@ -15,7 +15,7 @@
  */
 import { Multilink, NumberProperty, type ReadOnlyProperty } from "scenerystack/axon";
 import type { Vector3 } from "scenerystack/dot";
-import { Circle, DragListener, KeyboardDragListener, Node, Rectangle, Text } from "scenerystack/scenery";
+import { Circle, Node, Rectangle, RichDragListener, Text } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import QubitSketchColors from "../../QubitSketchColors.js";
 import { FONTS } from "../../QubitSketchFonts.js";
@@ -86,18 +86,18 @@ export class BlochSpheresNode extends Node {
       );
     };
     dragArea.addInputListener(
-      new DragListener({
-        drag: (_event, listener) => {
-          rotateCamera(listener.modelDelta);
+      new RichDragListener({
+        dragListenerOptions: {
+          drag: (_event, listener) => {
+            rotateCamera(listener.modelDelta);
+          },
         },
-      }),
-    );
-    dragArea.addInputListener(
-      new KeyboardDragListener({
-        dragSpeed: 200,
-        shiftDragSpeed: 80,
-        drag: (_event, listener) => {
-          rotateCamera(listener.modelDelta);
+        keyboardDragListenerOptions: {
+          dragSpeed: 200,
+          shiftDragSpeed: 80,
+          drag: (_event, listener) => {
+            rotateCamera(listener.modelDelta);
+          },
         },
       }),
     );

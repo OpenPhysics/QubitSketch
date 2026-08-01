@@ -176,6 +176,8 @@ export class GatePalettePanel extends Node {
             preview = null;
           }
         };
+        // Palette drag-to-place is pointer-only; keyboard placement uses click-
+        // to-select tool then slot focus / place shortcuts elsewhere in the sim.
         const dragListener = new DragListener({
           start: (event) => {
             hideTooltip();
