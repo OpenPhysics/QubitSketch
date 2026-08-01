@@ -13,7 +13,14 @@
  *   probabilitiesProperty — |amplitude|² per basis state
  *   blochVectorsProperty  — per-qubit reduced Bloch vector (Vector3)
  */
-import { BooleanProperty, DerivedProperty, NumberProperty, Property, type ReadOnlyProperty } from "scenerystack/axon";
+import {
+  BooleanProperty,
+  DerivedProperty,
+  NumberProperty,
+  Property,
+  type ReadOnlyProperty,
+  StringUnionProperty,
+} from "scenerystack/axon";
 import type { Complex, Vector3 } from "scenerystack/dot";
 import { Range } from "scenerystack/dot";
 import type { TModel } from "scenerystack/joist";
@@ -30,6 +37,7 @@ import {
   MIN_QUBITS,
   NUM_STEPS,
   ROTATION_TOOL_AXIS,
+  SELECTED_TOOL_VALUES,
 } from "./GateType.js";
 import { computeBlochVectors, simulate } from "./QuantumSimulator.js";
 
@@ -46,7 +54,9 @@ export class QubitSketchModel implements TModel {
   /** Number of visible qubit wires (1–MAX_QUBITS). Mutate via setQubitCount/loadCircuit/reset. */
   public readonly qubitCountProperty: ReadOnlyProperty<number>;
 
-  public readonly selectedToolProperty: Property<SelectedTool> = new Property<SelectedTool>("H");
+  public readonly selectedToolProperty: StringUnionProperty<SelectedTool> = new StringUnionProperty<SelectedTool>("H", {
+    validValues: SELECTED_TOOL_VALUES,
+  });
 
   /** The parametrized-rotation cell currently being edited (drives the angle inspector), or null. */
   public readonly selectedCellProperty: Property<GridPosition | null> = new Property<GridPosition | null>(null);

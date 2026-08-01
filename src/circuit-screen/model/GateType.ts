@@ -94,6 +94,18 @@ export const ROTATION_TOOL_AXIS: Record<RotationTool, RotationAxis> = { Rx: "X",
 /** The currently active placement tool (a gate, a control/swap marker, a rotation, or the eraser). */
 export type SelectedTool = GateType | "control" | "antiControl" | "swap" | RotationTool | "eraser";
 
+/** Every selectable placement tool, in palette order. Drives the tool Property's valid values. */
+export const SELECTED_TOOL_VALUES: SelectedTool[] = [
+  ...Object.values(GateType),
+  "control",
+  "antiControl",
+  "swap",
+  "Rx",
+  "Ry",
+  "Rz",
+  "eraser",
+];
+
 export const NUM_STEPS = 8;
 export const MAX_QUBITS = 5;
 export const MIN_QUBITS = 1;
