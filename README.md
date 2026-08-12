@@ -1,5 +1,7 @@
 # QubitSketch
 
+[![CI](https://github.com/OpenPhysics/QubitSketch/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenPhysics/QubitSketch/actions/workflows/ci.yml)
+
 A drag-and-drop quantum circuit builder with a live state simulator, built with [SceneryStack](https://scenerystack.org/).
 Place gates on qubit wires and watch probabilities, amplitudes, Bloch spheres, and measurements update in
 real time.
