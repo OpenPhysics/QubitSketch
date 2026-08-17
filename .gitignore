@@ -38,5 +38,9 @@ Thumbs.db
 # Claude Code - local settings excluded, hooks tracked
 .claude/settings.local.json
 
+# Stray local clone of the Quirk upstream. Canonical copy is
+# ../Baseline/Qubit/Quirk (see OpenPhysics/Baseline).
+Quirk/
+
 # CI / local npm audit artifact (must not be linted)
 audit.json

@@ -152,7 +152,7 @@
     "lineWidth": 120
   },
   "files": {
-    "includes": ["**/*.ts", "**/*.js", "**/*.json", "**/*.html", "!dist", "!node_modules", "!.claude", "!Quirk"]
+    "includes": ["**/*.ts", "**/*.js", "**/*.json", "**/*.html", "!dist", "!node_modules", "!.claude"]
   },
   "overrides": [
     {
