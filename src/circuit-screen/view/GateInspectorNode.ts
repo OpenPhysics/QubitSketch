@@ -7,7 +7,7 @@
  * the circuit automatically through the model's DerivedProperty chain.
  */
 import { DerivedProperty, NumberProperty } from "scenerystack/axon";
-import { Dimension2, Range } from "scenerystack/dot";
+import { Dimension2, moduloBetweenDown, Range } from "scenerystack/dot";
 import { Text, VBox } from "scenerystack/scenery";
 import { HSlider, Panel } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
@@ -80,7 +80,8 @@ export class GateInspectorNode extends Panel {
         this.visible = true;
         titleText.string = rotationLabel(cell.axis);
         suppressWrite = true;
-        angleProperty.value = cell.theta;
+        // Stored theta can be negative (QASM / CHSH −π/4); wrap into the slider's [0, 2π).
+        angleProperty.value = moduloBetweenDown(cell.theta, 0, TWO_PI);
         suppressWrite = false;
       } else {
         this.visible = false;
