@@ -1,6 +1,6 @@
 # CLAUDE.md — QubitSketch
 
-Sim-specific context for AI assistants. General SceneryStack guidance: [OpenPhysics/.github/CLAUDE.md](https://github.com/OpenPhysics/.github/blob/main/CLAUDE.md).
+Sim-specific context for AI assistants. General SceneryStack guidance: [OpenLyceum/.github/CLAUDE.md](https://github.com/OpenLyceum/.github/blob/main/CLAUDE.md).
 
 ## Project
 
@@ -42,7 +42,7 @@ Physics for educators: `doc/model.md`. Architecture: `doc/implementation-notes.m
 
 ## Accessibility
 
-Follows the shared [OpenPhysics accessibility convention](https://github.com/OpenPhysics/Baton/blob/main/ACCESSIBILITY.md).
+Follows the shared [OpenLyceum accessibility convention](https://github.com/OpenLyceum/Baton/blob/main/ACCESSIBILITY.md).
 `CircuitScreenView` registers `CircuitScreenSummaryContent` (live current-details: qubit count)
 via the `screenSummaryContent` super-option, and orders the PDOM through a wrapper `Node`. A11y
 strings live under the top-level `a11y` key in each locale JSON, via `StringManager.getA11yStrings()`.

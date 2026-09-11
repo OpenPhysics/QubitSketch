@@ -1,6 +1,6 @@
 # QubitSketch
 
-[![CI](https://github.com/OpenPhysics/QubitSketch/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenPhysics/QubitSketch/actions/workflows/ci.yml)
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 A drag-and-drop quantum circuit builder with a live state simulator, built with [SceneryStack](https://scenerystack.org/).
 Place gates on qubit wires and watch probabilities, amplitudes, Bloch spheres, and measurements update in
@@ -50,9 +50,9 @@ npm start        # dev server → http://localhost:5173
 
 ## License
 
-GNU Affero General Public License v3.0 — see [OpenPhysics org license](https://github.com/OpenPhysics/.github/blob/main/LICENSE).
+GNU Affero General Public License v3.0 — see [OpenLyceum org license](https://github.com/OpenLyceum/.github/blob/main/LICENSE).
 
 ## Contributing
 
-See [OpenPhysics contributing guidelines](https://github.com/OpenPhysics/.github/blob/main/CONTRIBUTING.md).
+See [OpenLyceum contributing guidelines](https://github.com/OpenLyceum/.github/blob/main/CONTRIBUTING.md).
 Report bugs via GitHub Issues; use org issue templates.
